@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: owais
+      POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
       POSTGRES_DB: streamline_analytics_db
       # Performance tuning for personal use
@@ -23,7 +23,7 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U owais -d streamline_analytics_db"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d streamline_analytics_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,7 +63,7 @@ services:
       DB_POSTGRESDB_HOST: postgres_main
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: n8n_db
-      DB_POSTGRESDB_USER: owais
+      DB_POSTGRESDB_USER: admin
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
       # Performance & Features
       EXECUTIONS_DATA_PRUNE: "true"
@@ -109,7 +109,7 @@ services:
       MB_DB_TYPE: postgres
       MB_DB_DBNAME: metabase_app
       MB_DB_PORT: 5432
-      MB_DB_USER: owais
+      MB_DB_USER: admin
       MB_DB_PASS: ${POSTGRES_PASSWORD:-change_me_strong}
       MB_DB_HOST: postgres_main
       # Java/Performance settings

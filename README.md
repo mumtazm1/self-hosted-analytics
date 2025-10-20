@@ -25,7 +25,7 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 │              ┌───────▼────────┐             │
 │              │   PostgreSQL   │             │
 │              │     :5432      │             │
-│              │   user: owais  │             │
+│              │   user: admin  │             │
 │              │                │             │
 │              │ • streamline_  │             │
 │              │   analytics_db │             │
@@ -76,7 +76,7 @@ After containers are running (give it 2-3 minutes):
 - **PostgreSQL** (via DBeaver or any SQL client):
   - Host: `localhost`
   - Port: `5432`
-  - User: `owais`
+  - User: `admin`
   - Password: (from .env or default `change_me_strong`)
   - Databases: `streamline_analytics_db`, `n8n_db`, `metabase_app`
 
@@ -90,7 +90,7 @@ After containers are running (give it 2-3 minutes):
    - **Host**: `postgres_main`
    - **Port**: `5432`
    - **Database**: `streamline_analytics_db`
-   - **Username**: `owais`
+   - **Username**: `admin`
    - **Password**: (from .env or default)
 
 ### Create n8n Workflow to Populate Database
@@ -101,7 +101,7 @@ After containers are running (give it 2-3 minutes):
 4. Configure connection:
    - **Host**: `postgres_main`
    - **Database**: `streamline_analytics_db`
-   - **User**: `owais`
+   - **User**: `admin`
    - **Password**: (from .env or default)
    - **Port**: `5432`
    - **SSL Mode**: `disable` (for local)
@@ -160,19 +160,19 @@ docker-compose up -d
 
 ```bash
 # Access PostgreSQL CLI
-docker exec -it postgres_main psql -U owais -d streamline_analytics_db
+docker exec -it postgres_main psql -U admin -d streamline_analytics_db
 
 # Create backup (Windows PowerShell)
-docker exec postgres_main pg_dump -U owais streamline_analytics_db > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres_main pg_dump -U admin streamline_analytics_db > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # Restore backup
-docker exec -i postgres_main psql -U owais -d streamline_analytics_db < ./backups/backup_20231020_120000.sql
+docker exec -i postgres_main psql -U admin -d streamline_analytics_db < ./backups/backup_20231020_120000.sql
 
 # Backup all databases (Windows PowerShell)
-docker exec postgres_main pg_dumpall -U owais > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres_main pg_dumpall -U admin > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # List all databases
-docker exec -it postgres_main psql -U owais -c "\l"
+docker exec -it postgres_main psql -U admin -c "\l"
 ```
 
 ### Monitoring
@@ -271,7 +271,7 @@ Create `backup.bat`:
 
 ```batch
 @echo off
-docker exec postgres_main pg_dumpall -U owais > ./backups/backup_%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%.sql
+docker exec postgres_main pg_dumpall -U admin > ./backups/backup_%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%.sql
 echo Backup complete!
 ```
 

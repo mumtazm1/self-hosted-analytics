@@ -14,7 +14,7 @@ echo Update complete! Services restarted with latest versions.
 echo.
 echo n8n:       http://localhost:5678
 echo Metabase:  http://localhost:3000
-echo PostgreSQL: localhost:5432 (user: owais)
+echo PostgreSQL: localhost:5432 (user: admin)
 echo.
 pause
 
