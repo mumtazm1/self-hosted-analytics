@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # ========================================
   # PostgreSQL - Central Database
@@ -141,13 +139,13 @@ services:
       - stack-net
 
 # ========================================
-# Named Volumes
+# Named Volumes (External = Protected from deletion)
 # ========================================
 volumes:
   postgres_data:
-    driver: local
+    external: true
   n8n_data:
-    driver: local
+    external: true
 
 # ========================================
 # Network Configuration
