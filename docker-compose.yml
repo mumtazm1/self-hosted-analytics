@@ -1,0 +1,160 @@
+version: "3.8"
+
+services:
+  # ========================================
+  # PostgreSQL - Central Database
+  # ========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres_main
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: owais
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
+      POSTGRES_DB: streamline_analytics_db
+      # Performance tuning for personal use
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_MAX_CONNECTIONS: 100
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U owais -d streamline_analytics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - stack-net
+
+  # ========================================
+  # n8n - Workflow Automation
+  # ========================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: America/Los_Angeles
+      TZ: America/Los_Angeles
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      # Database configuration
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres_main
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n_db
+      DB_POSTGRESDB_USER: owais
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
+      # Performance & Features
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: 168  # Keep execution data for 7 days
+      N8N_LOG_LEVEL: info
+      N8N_LOG_OUTPUT: console
+      # Uncomment when using a domain/tunnel:
+      # N8N_PROTOCOL: https
+      # N8N_HOST: n8n.yourdomain.com
+      # WEBHOOK_URL: https://n8n.yourdomain.com
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./shared:/shared
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - stack-net
+
+  # ========================================
+  # Metabase - Analytics & BI
+  # ========================================
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase_app
+      MB_DB_PORT: 5432
+      MB_DB_USER: owais
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-change_me_strong}
+      MB_DB_HOST: postgres_main
+      # Java/Performance settings
+      JAVA_OPTS: -Xmx1g -Xms512m
+      # Jetty settings
+      MB_JETTY_HOST: 0.0.0.0
+      MB_JETTY_PORT: 3000
+      # Optional: Set site URL when using domain
+      # MB_SITE_URL: http://localhost:3000
+    volumes:
+      - ./shared:/shared
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - stack-net
+
+# ========================================
+# Named Volumes
+# ========================================
+volumes:
+  postgres_data:
+    driver: local
+  n8n_data:
+    driver: local
+
+# ========================================
+# Network Configuration
+# ========================================
+networks:
+  stack-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
