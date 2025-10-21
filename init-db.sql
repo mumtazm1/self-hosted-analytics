@@ -12,7 +12,7 @@ CREATE DATABASE metabase_app;
 GRANT ALL PRIVILEGES ON DATABASE metabase_app TO admin;
 
 -- Connect to main analytics database and create example schema
-\c streamline_analytics_db;
+\c analytics_db;
 
 -- Example: Create a schema for storing processed data
 CREATE SCHEMA IF NOT EXISTS processed;
@@ -34,5 +34,5 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA processed TO admin;
 -- Print confirmation
 \echo 'Database initialization complete!'
 \echo 'Created databases: n8n_db, metabase_app'
-\echo 'Main analytics database: streamline_analytics_db'
+\echo 'Main analytics database: analytics_db'
 

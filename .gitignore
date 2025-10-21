@@ -1,17 +1,19 @@
 # Environment variables
 .env
 
-# Shared data directory
-shared/
+# Shared data directory (but keep the directory structure)
+shared/*
+!shared/.gitkeep
 
-# Backup files
+# Backup files (but keep the directory structure)
 backups/*.sql
 backups/*.dump
+backups/*.gz
+!backups/.gitkeep
 
 # Docker volumes (if using local bind mounts)
 postgres_data/
 n8n_data/
-pgadmin_data/
 
 # Logs
 *.log
@@ -23,6 +25,3 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-
-# Scripts
-create-shortcuts.bat

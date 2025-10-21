@@ -27,8 +27,7 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 │              │     :5432      │             │
 │              │   user: admin  │             │
 │              │                │             │
-│              │ • streamline_  │             │
-│              │   analytics_db │             │
+│              │ • analytics_db │             │
 │              │ • n8n_db       │             │
 │              │ • metabase_app │             │
 │              └────────────────┘             │
@@ -55,10 +54,14 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
    - Create `.env` file with: `POSTGRES_PASSWORD=your_secure_password`
    - Or use default: `change_me_strong` (change in production!)
 
-3. **Start the stack** - Just double-click `start.bat`
+3. **Create desktop shortcuts** (Windows only)
+   - Double-click `create-shortcuts.bat` 
+   - This creates 3 shortcuts on your desktop for easy access
+
+4. **Start the stack** - Double-click `start.bat` (or the desktop shortcut)
    - Or run: `docker-compose up -d`
 
-4. **Check status** - Double-click `status.bat`
+5. **Check status** - Double-click `status.bat` (or the desktop shortcut)
    - Or run: `docker-compose ps`
 
 ### First-Time Access
@@ -78,7 +81,7 @@ After containers are running (give it 2-3 minutes):
   - Port: `5432`
   - User: `admin`
   - Password: (from .env or default `change_me_strong`)
-  - Databases: `streamline_analytics_db`, `n8n_db`, `metabase_app`
+  - Databases: `analytics_db`, `n8n_db`, `metabase_app`
 
 ## 📊 Usage Examples
 
@@ -89,7 +92,7 @@ After containers are running (give it 2-3 minutes):
    - **Type**: PostgreSQL
    - **Host**: `postgres_main`
    - **Port**: `5432`
-   - **Database**: `streamline_analytics_db`
+   - **Database**: `analytics_db`
    - **Username**: `admin`
    - **Password**: (from .env or default)
 
@@ -100,7 +103,7 @@ After containers are running (give it 2-3 minutes):
 3. Add "PostgreSQL" node
 4. Configure connection:
    - **Host**: `postgres_main`
-   - **Database**: `streamline_analytics_db`
+   - **Database**: `analytics_db`
    - **User**: `admin`
    - **Password**: (from .env or default)
    - **Port**: `5432`
@@ -113,7 +116,7 @@ After containers are running (give it 2-3 minutes):
       ↓
   [n8n Workflow]
       ↓ (transforms data)
-[PostgreSQL streamline_analytics_db.processed]
+[PostgreSQL analytics_db.processed]
       ↓ (queries)
   [Metabase Dashboard]
 ```
@@ -122,12 +125,14 @@ After containers are running (give it 2-3 minutes):
 
 ### Easy Windows Scripts (Just Double-Click!)
 
+- **`create-shortcuts.bat`** - Create desktop shortcuts for easy access (run once)
 - **`start.bat`** - Start all services
 - **`stop.bat`** - Stop all services  
 - **`restart.bat`** - Restart all services
 - **`update.bat`** - Update to latest versions and restart
 - **`status.bat`** - Check what's running
 - **`logs.bat`** - View live logs (Ctrl+C to exit)
+- **`backup.bat`** - Backup all PostgreSQL databases
 
 ### Manual Commands (Alternative)
 
@@ -160,13 +165,13 @@ docker-compose up -d
 
 ```bash
 # Access PostgreSQL CLI
-docker exec -it postgres_main psql -U admin -d streamline_analytics_db
+docker exec -it postgres_main psql -U admin -d analytics_db
 
 # Create backup (Windows PowerShell)
-docker exec postgres_main pg_dump -U admin streamline_analytics_db > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres_main pg_dump -U admin analytics_db > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # Restore backup
-docker exec -i postgres_main psql -U admin -d streamline_analytics_db < ./backups/backup_20231020_120000.sql
+docker exec -i postgres_main psql -U admin -d analytics_db < ./backups/backup_20231020_120000.sql
 
 # Backup all databases (Windows PowerShell)
 docker exec postgres_main pg_dumpall -U admin > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql

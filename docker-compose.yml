@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
-      POSTGRES_DB: streamline_analytics_db
+      POSTGRES_DB: analytics_db
       # Performance tuning for personal use
       POSTGRES_SHARED_BUFFERS: 256MB
       POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
@@ -21,7 +21,7 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d streamline_analytics_db"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d analytics_db"]
       interval: 10s
       timeout: 5s
       retries: 5
