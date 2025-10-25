@@ -4,14 +4,14 @@ services:
   # ========================================
   postgres:
     image: postgres:16-alpine
-    container_name: postgres_main
+    container_name: ${POSTGRES_HOST:-postgres}
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
-      POSTGRES_DB: analytics_db
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
+      POSTGRES_DB: ${POSTGRES_DB:-analytics}
       # Performance tuning for personal use
       POSTGRES_SHARED_BUFFERS: 256MB
       POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
@@ -21,7 +21,7 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d analytics_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-analytics}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,23 +46,25 @@ services:
   # n8n - Workflow Automation
   # ========================================
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.115.3
     container_name: n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
-      GENERIC_TIMEZONE: America/Los_Angeles
-      TZ: America/Los_Angeles
+      GENERIC_TIMEZONE: ${TZ:-UTC}
+      TZ: ${TZ:-UTC}
       N8N_RUNNERS_ENABLED: "true"
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-      # Database configuration
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: postgres_main
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: n8n_db
-      DB_POSTGRESDB_USER: admin
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
+      # Database configuration - Using SQLite (keeps existing workflows)
+      # To use PostgreSQL instead, uncomment lines below and comment DB_TYPE: sqlite
+      DB_TYPE: sqlite
+      #DB_TYPE: postgresdb
+      #DB_POSTGRESDB_HOST: ${POSTGRES_HOST:-postgres}
+      #DB_POSTGRESDB_PORT: ${POSTGRES_PORT:-5432}
+      #DB_POSTGRESDB_DATABASE: ${POSTGRES_N8N_DB:-n8n}
+      #DB_POSTGRESDB_USER: ${POSTGRES_USER:-admin}
+      #DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
       # Performance & Features
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: 168  # Keep execution data for 7 days
@@ -102,18 +104,17 @@ services:
     container_name: metabase
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       MB_DB_TYPE: postgres
-      MB_DB_DBNAME: metabase_app
-      MB_DB_PORT: 5432
-      MB_DB_USER: admin
-      MB_DB_PASS: ${POSTGRES_PASSWORD:-change_me_strong}
-      MB_DB_HOST: postgres_main
+      MB_DB_DBNAME: ${POSTGRES_METABASE_DB:-metabase}
+      MB_DB_PORT: ${POSTGRES_PORT:-5432}
+      MB_DB_USER: ${POSTGRES_USER:-admin}
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
+      MB_DB_HOST: ${POSTGRES_HOST:-postgres}
       # Java/Performance settings
       JAVA_OPTS: -Xmx1g -Xms512m
       # Jetty settings
-      MB_JETTY_HOST: 0.0.0.0
       MB_JETTY_PORT: 3000
       # Optional: Set site URL when using domain
       # MB_SITE_URL: http://localhost:3000
@@ -138,6 +139,46 @@ services:
     networks:
       - stack-net
 
+  # ========================================
+  # Prefect - Workflow Orchestration
+  # ========================================
+  prefect:
+    image: prefecthq/prefect:2-latest
+    container_name: prefect
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4200:4200"
+    environment:
+      # Database configuration
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_PREFECT_DB:-prefect}
+      # Server configuration
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+      PREFECT_API_URL: ${PREFECT_API_URL:-http://localhost:4200/api}
+      # Timezone
+      TZ: ${TZ:-UTC}
+    volumes:
+      - prefect_data:/root/.prefect
+      - ./shared:/shared
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: prefect server start
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - stack-net
+
 # ========================================
 # Named Volumes (External = Protected from deletion)
 # ========================================
@@ -145,6 +186,8 @@ volumes:
   postgres_data:
     external: true
   n8n_data:
+    external: true
+  prefect_data:
     external: true
 
 # ========================================
