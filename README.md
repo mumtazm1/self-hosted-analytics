@@ -272,9 +272,9 @@ JAVA_OPTS: -Xmx512m -Xms256m
 
 This stack uses **pinned versions** for stability and security:
 
-- `postgres:16.4-alpine`
-- `n8nio/n8n:1.63.4`
-- `metabase/metabase:v0.51.2`
+- `postgres:16-alpine` (pinned to major version 16)
+- `n8nio/n8n:1.115.3`
+- `metabase/metabase:latest` (update as needed)
 
 ### How to Upgrade
 
