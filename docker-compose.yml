@@ -3,14 +3,14 @@ services:
   # PostgreSQL - Central Database
   # ========================================
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.4-alpine
     container_name: postgres_main
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
       POSTGRES_DB: analytics_db
       # Performance tuning for personal use
       POSTGRES_SHARED_BUFFERS: 256MB
@@ -46,11 +46,11 @@ services:
   # n8n - Workflow Automation
   # ========================================
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.63.4
     container_name: n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
       GENERIC_TIMEZONE: America/Los_Angeles
       TZ: America/Los_Angeles
@@ -62,7 +62,9 @@ services:
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: n8n_db
       DB_POSTGRESDB_USER: admin
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
+      # Encryption
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-INSECURE_DEFAULT_CHANGE_ME}
       # Performance & Features
       EXECUTIONS_DATA_PRUNE: "true"
       EXECUTIONS_DATA_MAX_AGE: 168  # Keep execution data for 7 days
@@ -98,22 +100,24 @@ services:
   # Metabase - Analytics & BI
   # ========================================
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.51.2
     container_name: metabase
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       MB_DB_TYPE: postgres
       MB_DB_DBNAME: metabase_app
       MB_DB_PORT: 5432
       MB_DB_USER: admin
-      MB_DB_PASS: ${POSTGRES_PASSWORD:-change_me_strong}
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
       MB_DB_HOST: postgres_main
+      # Encryption
+      MB_ENCRYPTION_SECRET_KEY: ${MB_ENCRYPTION_SECRET_KEY:-INSECURE_DEFAULT_CHANGE_ME}
       # Java/Performance settings
       JAVA_OPTS: -Xmx1g -Xms512m
       # Jetty settings
-      MB_JETTY_HOST: 0.0.0.0
+      MB_JETTY_HOST: 127.0.0.1
       MB_JETTY_PORT: 3000
       # Optional: Set site URL when using domain
       # MB_SITE_URL: http://localhost:3000

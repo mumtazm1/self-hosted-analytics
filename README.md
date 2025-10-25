@@ -8,6 +8,17 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 - **n8n** - Workflow automation and data integration
 - **Metabase** - Business intelligence and analytics
 
+## 🔒 Security Notice
+
+**This stack is configured for secure local use:**
+
+- ✅ All services bound to `localhost` (127.0.0.1) only
+- ✅ Not accessible from other computers on your network
+- ✅ Not accessible from the internet
+- ✅ Requires configuration changes for remote access
+
+**For detailed security information, see [SECURITY.md](SECURITY.md)**
+
 ## 🎯 Architecture
 
 ```
@@ -50,9 +61,23 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
    mkdir shared backups
    ```
 
-2. **Optional: Set PostgreSQL password**
-   - Create `.env` file with: `POSTGRES_PASSWORD=your_secure_password`
-   - Or use default: `change_me_strong` (change in production!)
+2. **Configure environment variables** (Recommended)
+   
+   Copy the example environment file:
+   ```bash
+   # Windows
+   copy .env.example .env
+   
+   # Linux/Mac
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and set strong passwords:
+   - `POSTGRES_PASSWORD` - Your PostgreSQL master password
+   - `MB_ENCRYPTION_SECRET_KEY` - Metabase encryption key (generate with: `openssl rand -hex 16`)
+   - `N8N_ENCRYPTION_KEY` - n8n encryption key (generate with: `openssl rand -hex 16`)
+   
+   **Note:** The stack will work with default values for localhost-only use, but you should change them for security.
 
 3. **Create desktop shortcuts** (Windows only)
    - Double-click `create-shortcuts.bat` 
@@ -69,19 +94,24 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 After containers are running (give it 2-3 minutes):
 
 - **n8n**: http://localhost:5678
+  - ⚠️ Only accessible from this computer (localhost-only)
   - Create your account on first visit
   - Credentials stored in PostgreSQL
   
 - **Metabase**: http://localhost:3000
+  - ⚠️ Only accessible from this computer (localhost-only)
   - Complete setup wizard
   - Connect to `postgres_main:5432` for analytics
   
 - **PostgreSQL** (via DBeaver or any SQL client):
-  - Host: `localhost`
+  - ⚠️ Only accessible from this computer (localhost-only)
+  - Host: `localhost` or `127.0.0.1`
   - Port: `5432`
   - User: `admin`
-  - Password: (from .env or default `change_me_strong`)
+  - Password: (from .env or default)
   - Databases: `analytics_db`, `n8n_db`, `metabase_app`
+
+**Need remote access?** See the "Remote Access Options" section below or [SECURITY.md](SECURITY.md) for secure methods.
 
 ## 📊 Usage Examples
 
@@ -195,13 +225,24 @@ docker network inspect self_hosted_analytics_stack-net
 
 ## 🔒 Security Best Practices
 
-1. **Change default passwords** in `.env` before first run
-2. **Use strong passwords** (20+ characters, mixed case, numbers, symbols)
-3. **Restrict network access** if exposing to internet
-4. **Regular backups** - schedule daily backups
+### For Localhost-Only Use (Default)
+
+✅ **Already secure:** Services bound to localhost only  
+✅ **Basic passwords OK:** Not exposed to network  
+⚠️ **Still recommended:** Set strong passwords in `.env` file
+
+### For Remote Access or Internet Exposure
+
+🚨 **CRITICAL - You MUST:**
+
+1. **Set strong passwords** in `.env` file (20+ characters, mixed case, numbers, symbols)
+2. **Use secure tunneling** (SSH, Cloudflare Tunnel, Tailscale) - see [SECURITY.md](SECURITY.md)
+3. **Enable HTTPS** if using reverse proxy
+4. **Regular backups** - schedule `backup.bat` with Task Scheduler
 5. **Update regularly** - `docker-compose pull && docker-compose up -d`
 6. **Monitor logs** - check for suspicious activity
-7. **Use reverse proxy** (Traefik/Nginx) with SSL for external access
+
+**For detailed security guidance, see [SECURITY.md](SECURITY.md)**
 
 ## 📈 Performance Tuning
 
@@ -226,6 +267,42 @@ JAVA_OPTS: -Xmx512m -Xms256m
 
 # Reduce resource limits across all services
 ```
+
+## 🔄 Upgrading Docker Images
+
+This stack uses **pinned versions** for stability and security:
+
+- `postgres:16.4-alpine`
+- `n8nio/n8n:1.63.4`
+- `metabase/metabase:v0.51.2`
+
+### How to Upgrade
+
+1. **Backup first!** Run `backup.bat`
+
+2. **Check for updates:**
+   - [PostgreSQL releases](https://hub.docker.com/_/postgres/tags?page=1&name=16)
+   - [n8n releases](https://hub.docker.com/r/n8nio/n8n/tags)
+   - [Metabase releases](https://hub.docker.com/r/metabase/metabase/tags)
+
+3. **Update versions in `docker-compose.yml`:**
+   ```yaml
+   image: postgres:16.5-alpine  # Update version number
+   ```
+
+4. **Apply updates:**
+   ```bash
+   docker-compose pull
+   docker-compose up -d
+   ```
+
+5. **Verify everything works:**
+   ```bash
+   docker-compose ps
+   docker-compose logs
+   ```
+
+⚠️ **Note:** Major version upgrades (e.g., Postgres 16 → 17) may require data migration. Always backup first!
 
 ## 🐛 Troubleshooting
 
@@ -282,14 +359,39 @@ echo Backup complete!
 
 Schedule with Windows Task Scheduler to run daily.
 
-## 🌐 External Access (Optional)
+## 🌐 Remote Access Options
 
-For secure external access, consider:
+By default, services are **only accessible from your computer**. To access from other devices:
 
-1. **Cloudflare Tunnel** (free, recommended)
-2. **Tailscale** (free for personal use)
-3. **Nginx Reverse Proxy** with Let's Encrypt SSL
-4. **Traefik** with automatic HTTPS
+### Recommended Methods
+
+1. **SSH Tunnel** (Most Secure)
+   ```bash
+   ssh -L 3000:127.0.0.1:3000 user@your-server
+   ```
+   Then access via `http://localhost:3000` on remote machine
+
+2. **Cloudflare Tunnel** (Easy & Free)
+   - Automatic HTTPS
+   - No firewall changes needed
+   - [Setup Guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
+
+3. **Tailscale** (Private Network)
+   - Create secure network between devices
+   - [Setup Guide](https://tailscale.com/kb/)
+
+4. **Reverse Proxy** (Advanced)
+   - Nginx or Traefik with Let's Encrypt
+   - Requires significant security configuration
+   - Only recommended for experienced users
+
+⚠️ **Security Warning:** Before exposing to internet:
+- Set strong passwords in `.env`
+- Enable HTTPS
+- Read [SECURITY.md](SECURITY.md) thoroughly
+
+**Need to temporarily expose Postgres for GUI tools?**
+See [SECURITY.md](SECURITY.md) for safe methods.
 
 ## 📚 Additional Resources
 
