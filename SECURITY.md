@@ -46,6 +46,7 @@ ports:
   - "127.0.0.1:5432:5432"  # PostgreSQL
   - "127.0.0.1:5678:5678"  # n8n
   - "127.0.0.1:3000:3000"  # Metabase
+  - "127.0.0.1:4200:4200"  # Prefect
 ```
 
 **What this means:**
@@ -57,14 +58,16 @@ ports:
 
 The stack uses environment variables for sensitive configuration:
 
-- `POSTGRES_PASSWORD` - Database master password
-- `MB_ENCRYPTION_SECRET_KEY` - Metabase data encryption key
-- `N8N_ENCRYPTION_KEY` - n8n credentials encryption key
+- `POSTGRES_PASSWORD` - Database master password (shared by all services)
+- All services (n8n, Metabase, Prefect) connect to PostgreSQL using the same credentials
 
 **Default behavior:**
-- Ships with obvious placeholder values (`INSECURE_DEFAULT_CHANGE_ME`)
+- Ships with obvious placeholder value (`INSECURE_DEFAULT_CHANGE_ME`)
 - Works out-of-the-box for localhost testing
 - Should be changed before any production use or external exposure
+
+**Shared Database Credentials:**
+For simplicity, all services share the same PostgreSQL user (`admin`) and password. This is acceptable for personal/development use on localhost. For production or multi-tenant scenarios, consider creating separate database users with limited permissions for each service.
 
 ### Version Pinning
 
@@ -133,11 +136,12 @@ Access services remotely via SSH tunnel without exposing ports:
 
 ```bash
 # On your local machine (remote location)
-ssh -L 3000:127.0.0.1:3000 user@your-server.com
-ssh -L 5678:127.0.0.1:5678 user@your-server.com
+ssh -L 3000:127.0.0.1:3000 user@your-server.com  # Metabase
+ssh -L 5678:127.0.0.1:5678 user@your-server.com  # n8n
+ssh -L 4200:127.0.0.1:4200 user@your-server.com  # Prefect
 ```
 
-Then access via `http://localhost:3000` and `http://localhost:5678` on your remote machine.
+Then access services via `http://localhost:PORT` on your remote machine.
 
 **Pros:** Very secure, uses existing SSH infrastructure  
 **Cons:** Requires SSH access, must set up for each session
@@ -190,26 +194,26 @@ If you choose this path:
 3. Connect to Postgres container: `docker-compose up -d postgres`
 4. Change password: 
    ```sql
-   docker exec -it postgres_main psql -U admin -c "ALTER USER admin WITH PASSWORD 'new_password';"
+   docker exec -it postgres psql -U admin -c "ALTER USER admin WITH PASSWORD 'new_password';"
    ```
 5. Start other services: `docker-compose up -d`
 
-### Rotating Encryption Keys
+**Note:** Since all services share this password, changing it will update access for n8n, Metabase, and Prefect simultaneously.
 
-⚠️ **WARNING:** Changing encryption keys will make existing encrypted data unreadable!
+### Service-Specific Security Notes
 
-**For MB_ENCRYPTION_SECRET_KEY:**
-- Once Metabase has encrypted data, changing this key will break access
-- Only change if you're willing to reconfigure all database connections
+**n8n:**
+- Manages its own encryption keys internally (stored in `n8n_data` volume)
+- Change credentials by re-entering them in the n8n UI
 
-**For N8N_ENCRYPTION_KEY:**
-- Once n8n has stored credentials, changing this key will break all workflows
-- You'll need to re-enter all credentials in workflows
+**Metabase:**
+- Manages its own encryption keys internally (stored in database)
+- Change credentials by updating database connections in Metabase UI
 
-**Safe approach:**
-1. Export/backup all configurations and credentials
-2. Change the encryption key
-3. Re-import/reconfigure everything
+**Prefect:**
+- Stores workflow definitions and run history in PostgreSQL
+- No separate encryption keys needed
+- Secure API access via localhost binding
 
 ## 💾 Backup Security
 
@@ -218,7 +222,7 @@ If you choose this path:
 1. **Encrypt backups** if storing off-site:
    ```bash
    # Create encrypted backup
-   docker exec postgres_main pg_dumpall -U admin | gpg --symmetric --cipher-algo AES256 > backup_encrypted.sql.gpg
+   docker exec postgres pg_dumpall -U admin | gpg --symmetric --cipher-algo AES256 > backup_encrypted.sql.gpg
    ```
 
 2. **Store backups securely:**
@@ -229,7 +233,7 @@ If you choose this path:
 3. **Test restore procedures regularly:**
    ```bash
    # Test restore (on test database)
-   docker exec -i postgres_main psql -U admin -d test_db < backup.sql
+   docker exec -i postgres psql -U admin -d test_db < backup.sql
    ```
 
 4. **Automate backups:**
@@ -248,9 +252,8 @@ The `./backups/` directory contains sensitive data:
 ### Before First Use
 - [ ] Copy `.env.example` to `.env`
 - [ ] Generate and set strong `POSTGRES_PASSWORD`
-- [ ] Generate and set `MB_ENCRYPTION_SECRET_KEY`
-- [ ] Generate and set `N8N_ENCRYPTION_KEY`
-- [ ] Verify services only accessible on localhost
+- [ ] Review other environment variables in `.env`
+- [ ] Verify all services only accessible on localhost (ports: 3000, 4200, 5432, 5678)
 
 ### Before Internet Exposure
 - [ ] All secrets changed from defaults
@@ -277,8 +280,8 @@ If you suspect a security breach:
    - Review logs: `docker-compose logs`
 
 2. **Investigation:**
-   - Check who accessed services: Review Metabase/n8n logs
-   - Check database logs: `docker logs postgres_main`
+   - Check who accessed services: Review Metabase/n8n/Prefect logs
+   - Check database logs: `docker logs postgres`
    - Review system logs for unauthorized access
 
 3. **Remediation:**
@@ -298,6 +301,7 @@ If you suspect a security breach:
 - [PostgreSQL Security Guide](https://www.postgresql.org/docs/current/security.html)
 - [n8n Security Documentation](https://docs.n8n.io/hosting/security/)
 - [Metabase Security Guide](https://www.metabase.com/learn/administration/metabase-security)
+- [Prefect Security Documentation](https://docs.prefect.io/latest/guides/deployment/)
 
 ## 📝 Questions or Issues?
 

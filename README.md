@@ -4,9 +4,12 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 
 ## 📦 What's Included
 
-- **PostgreSQL 16** - Central database for all services and your data
-- **n8n** - Workflow automation and data integration
-- **Metabase** - Business intelligence and analytics
+| Service | Purpose | Access URL | Port |
+|---------|---------|------------|------|
+| **PostgreSQL 16** | Central database for all services | localhost:5432 | 5432 |
+| **n8n** | Workflow automation & data integration | http://localhost:5678 | 5678 |
+| **Metabase** | Business intelligence & analytics | http://localhost:3000 | 3000 |
+| **Prefect** | Workflow orchestration & scheduling | http://localhost:4200 | 4200 |
 
 ## 🔒 Security Notice
 
@@ -22,28 +25,30 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 ## 🎯 Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│         Analytics & Automation Stack        │
-├─────────────────────────────────────────────┤
-│                                             │
-│       ┌──────────┐      ┌──────────┐       │
-│       │   n8n    │      │ Metabase │       │
-│       │  :5678   │      │  :3000   │       │
-│       └─────┬────┘      └─────┬────┘       │
-│             │                 │             │
-│             └────────┬────────┘             │
-│                      │                      │
-│              ┌───────▼────────┐             │
-│              │   PostgreSQL   │             │
-│              │     :5432      │             │
-│              │   user: admin  │             │
-│              │                │             │
-│              │ • analytics_db │             │
-│              │ • n8n_db       │             │
-│              │ • metabase_app │             │
-│              └────────────────┘             │
-│                                             │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│         Analytics & Automation Stack                 │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
+│  │   n8n    │  │ Metabase │  │ Prefect  │            │
+│  │  :5678   │  │  :3000   │  │  :4200   │            │
+│  └─────┬────┘  └─────┬────┘  └─────┬────┘            │
+│        │             │              │                │
+│        └─────────────┼──────────────┘                │
+│                      │                               │
+│              ┌───────▼────────┐                      │
+│              │   PostgreSQL   │                      │
+│              │     :5432      │                      │
+│              │   user: admin  │                      │
+│              │                │                      │
+│              │ • analytics    │ (your data)          │
+│              │ • n8n          │ (workflows)          │
+│              │ • metabase     │ (BI metadata)        │
+│              │ • prefect      │ (orchestration)      │
+│              └────────────────┘                      │
+│                                                      │
+│  All services: localhost only (127.0.0.1)            │
+└──────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -103,28 +108,65 @@ After containers are running (give it 2-3 minutes):
   - Complete setup wizard
   - Connect to `postgres_main:5432` for analytics
   
+- **Prefect**: http://localhost:4200
+  - ⚠️ Only accessible from this computer (localhost-only)
+  - Create and schedule workflows
+  - Monitor workflow runs in the UI
+  
 - **PostgreSQL** (via DBeaver or any SQL client):
   - ⚠️ Only accessible from this computer (localhost-only)
   - Host: `localhost` or `127.0.0.1`
   - Port: `5432`
   - User: `admin`
   - Password: (from .env or default)
-  - Databases: `analytics_db`, `n8n_db`, `metabase_app`
+  - Databases: `analytics`, `n8n`, `metabase`, `prefect`
 
 **Need remote access?** See the "Remote Access Options" section below or [SECURITY.md](SECURITY.md) for secure methods.
 
 ## 📊 Usage Examples
+
+### Using Prefect for Workflow Orchestration
+
+1. Open Prefect UI (http://localhost:4200)
+2. Create a simple Python flow:
+   ```python
+   from prefect import flow, task
+   
+   @task
+   def fetch_data():
+       # Your data fetching logic
+       return {"data": "example"}
+   
+   @task
+   def process_data(data):
+       # Process and transform data
+       return data
+   
+   @flow
+   def my_workflow():
+       data = fetch_data()
+       result = process_data(data)
+       return result
+   
+   if __name__ == "__main__":
+       my_workflow()
+   ```
+
+3. Deploy to Prefect server:
+   ```bash
+   prefect deploy
+   ```
 
 ### Connect Metabase to Your Analytics Database
 
 1. Open Metabase (http://localhost:3000)
 2. Add database connection:
    - **Type**: PostgreSQL
-   - **Host**: `postgres_main`
+   - **Host**: `postgres`
    - **Port**: `5432`
-   - **Database**: `analytics_db`
+   - **Database**: `analytics`
    - **Username**: `admin`
-   - **Password**: (from .env or default)
+   - **Password**: (from .env)
 
 ### Create n8n Workflow to Populate Database
 
@@ -132,23 +174,25 @@ After containers are running (give it 2-3 minutes):
 2. Create new workflow
 3. Add "PostgreSQL" node
 4. Configure connection:
-   - **Host**: `postgres_main`
-   - **Database**: `analytics_db`
+   - **Host**: `postgres`
+   - **Database**: `analytics`
    - **User**: `admin`
-   - **Password**: (from .env or default)
+   - **Password**: (from .env)
    - **Port**: `5432`
    - **SSL Mode**: `disable` (for local)
 
-### Example: API → n8n → PostgreSQL → Metabase
+### Example Workflows
 
+**Option 1: n8n for Simple Automation**
 ```
-[External API]
-      ↓
-  [n8n Workflow]
-      ↓ (transforms data)
-[PostgreSQL analytics_db.processed]
-      ↓ (queries)
-  [Metabase Dashboard]
+[External API] → [n8n Workflow] → [PostgreSQL analytics.data] → [Metabase Dashboard]
+```
+
+**Option 2: Prefect for Complex Orchestration**
+```
+[Prefect Flow] → [Python Tasks] → [PostgreSQL analytics.data] → [Metabase Dashboard]
+                      ↓
+              [n8n for Notifications]
 ```
 
 ## 🛠️ Management Commands
@@ -195,19 +239,19 @@ docker-compose up -d
 
 ```bash
 # Access PostgreSQL CLI
-docker exec -it postgres_main psql -U admin -d analytics_db
+docker exec -it postgres psql -U admin -d analytics
 
 # Create backup (Windows PowerShell)
-docker exec postgres_main pg_dump -U admin analytics_db > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres pg_dump -U admin analytics > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # Restore backup
-docker exec -i postgres_main psql -U admin -d analytics_db < ./backups/backup_20231020_120000.sql
+docker exec -i postgres psql -U admin -d analytics < ./backups/backup_20231020_120000.sql
 
 # Backup all databases (Windows PowerShell)
-docker exec postgres_main pg_dumpall -U admin > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres pg_dumpall -U admin > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # List all databases
-docker exec -it postgres_main psql -U admin -c "\l"
+docker exec -it postgres psql -U admin -c "\l"
 ```
 
 ### Monitoring
@@ -304,6 +348,38 @@ This stack uses **pinned versions** for stability and security:
 
 ⚠️ **Note:** Major version upgrades (e.g., Postgres 16 → 17) may require data migration. Always backup first!
 
+## 📋 Environment Variable Reference
+
+All configuration is managed via the `.env` file. Copy `.env.example` to `.env` and customize:
+
+### Database Connection
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_HOST` | `postgres` | PostgreSQL container hostname |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `POSTGRES_USER` | `admin` | Database superuser |
+| `POSTGRES_PASSWORD` | ⚠️ Required | Master database password |
+
+### Database Names
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_DB` | `analytics` | Main analytics database |
+| `POSTGRES_N8N_DB` | `n8n` | n8n workflow database |
+| `POSTGRES_METABASE_DB` | `metabase` | Metabase app database |
+| `POSTGRES_PREFECT_DB` | `prefect` | Prefect orchestration database |
+
+### Other Settings
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TZ` | `UTC` | Timezone for all services |
+| `N8N_PROTOCOL` | `http` | Protocol for n8n webhooks |
+| `N8N_HOST` | `localhost` | Hostname for n8n |
+| `WEBHOOK_URL` | `http://localhost:5678` | n8n webhook URL |
+| `MB_SITE_URL` | `http://localhost:3000` | Metabase site URL |
+| `PREFECT_API_URL` | `http://localhost:4200/api` | Prefect API URL |
+
+**Note:** All services share the same PostgreSQL credentials for simplicity. For advanced use cases, you can create separate database users with limited permissions.
+
 ## 🐛 Troubleshooting
 
 ### Services won't start
@@ -327,10 +403,10 @@ docker-compose up -d
 docker-compose ps postgres
 
 # Test connection
-docker exec postgres_main pg_isready -U streamline_user
+docker exec postgres pg_isready -U admin
 
 # Check database exists
-docker exec -it postgres_main psql -U streamline_user -d streamline_db -c "\l"
+docker exec -it postgres psql -U admin -d analytics -c "\l"
 ```
 
 ### n8n workflows timing out
