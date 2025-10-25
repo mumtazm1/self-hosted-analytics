@@ -4,35 +4,51 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 
 ## 📦 What's Included
 
-- **PostgreSQL 16** - Central database for all services and your data
-- **n8n** - Workflow automation and data integration
-- **Metabase** - Business intelligence and analytics
+| Service | Purpose | Access URL | Port |
+|---------|---------|------------|------|
+| **PostgreSQL 16** | Central database for all services | localhost:5432 | 5432 |
+| **n8n** | Workflow automation & data integration | http://localhost:5678 | 5678 |
+| **Metabase** | Business intelligence & analytics | http://localhost:3000 | 3000 |
+| **Prefect** | Workflow orchestration & scheduling | http://localhost:4200 | 4200 |
+
+## 🔒 Security Notice
+
+**This stack is configured for secure local use:**
+
+- ✅ All services bound to `localhost` (127.0.0.1) only
+- ✅ Not accessible from other computers on your network
+- ✅ Not accessible from the internet
+- ✅ Requires configuration changes for remote access
+
+**For detailed security information, see [SECURITY.md](SECURITY.md)**
 
 ## 🎯 Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│         Analytics & Automation Stack        │
-├─────────────────────────────────────────────┤
-│                                             │
-│       ┌──────────┐      ┌──────────┐       │
-│       │   n8n    │      │ Metabase │       │
-│       │  :5678   │      │  :3000   │       │
-│       └─────┬────┘      └─────┬────┘       │
-│             │                 │             │
-│             └────────┬────────┘             │
-│                      │                      │
-│              ┌───────▼────────┐             │
-│              │   PostgreSQL   │             │
-│              │     :5432      │             │
-│              │   user: admin  │             │
-│              │                │             │
-│              │ • analytics_db │             │
-│              │ • n8n_db       │             │
-│              │ • metabase_app │             │
-│              └────────────────┘             │
-│                                             │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│         Analytics & Automation Stack                 │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐            │
+│  │   n8n    │  │ Metabase │  │ Prefect  │            │
+│  │  :5678   │  │  :3000   │  │  :4200   │            │
+│  └─────┬────┘  └─────┬────┘  └─────┬────┘            │
+│        │             │              │                │
+│        └─────────────┼──────────────┘                │
+│                      │                               │
+│              ┌───────▼────────┐                      │
+│              │   PostgreSQL   │                      │
+│              │     :5432      │                      │
+│              │   user: admin  │                      │
+│              │                │                      │
+│              │ • analytics    │ (your data)          │
+│              │ • n8n          │ (workflows)          │
+│              │ • metabase     │ (BI metadata)        │
+│              │ • prefect      │ (orchestration)      │
+│              └────────────────┘                      │
+│                                                      │
+│  All services: localhost only (127.0.0.1)            │
+└──────────────────────────────────────────────────────┘
 ```
 
 ## 🚀 Quick Start
@@ -50,9 +66,23 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
    mkdir shared backups
    ```
 
-2. **Optional: Set PostgreSQL password**
-   - Create `.env` file with: `POSTGRES_PASSWORD=your_secure_password`
-   - Or use default: `change_me_strong` (change in production!)
+2. **Configure environment variables** (Recommended)
+   
+   Copy the example environment file:
+   ```bash
+   # Windows
+   copy .env.example .env
+   
+   # Linux/Mac
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and set strong passwords:
+   - `POSTGRES_PASSWORD` - Your PostgreSQL master password
+   - `MB_ENCRYPTION_SECRET_KEY` - Metabase encryption key (generate with: `openssl rand -hex 16`)
+   - `N8N_ENCRYPTION_KEY` - n8n encryption key (generate with: `openssl rand -hex 16`)
+   
+   **Note:** The stack will work with default values for localhost-only use, but you should change them for security.
 
 3. **Create desktop shortcuts** (Windows only)
    - Double-click `create-shortcuts.bat` 
@@ -69,32 +99,74 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 After containers are running (give it 2-3 minutes):
 
 - **n8n**: http://localhost:5678
+  - ⚠️ Only accessible from this computer (localhost-only)
   - Create your account on first visit
   - Credentials stored in PostgreSQL
   
 - **Metabase**: http://localhost:3000
+  - ⚠️ Only accessible from this computer (localhost-only)
   - Complete setup wizard
   - Connect to `postgres_main:5432` for analytics
   
+- **Prefect**: http://localhost:4200
+  - ⚠️ Only accessible from this computer (localhost-only)
+  - Create and schedule workflows
+  - Monitor workflow runs in the UI
+  
 - **PostgreSQL** (via DBeaver or any SQL client):
-  - Host: `localhost`
+  - ⚠️ Only accessible from this computer (localhost-only)
+  - Host: `localhost` or `127.0.0.1`
   - Port: `5432`
   - User: `admin`
-  - Password: (from .env or default `change_me_strong`)
-  - Databases: `analytics_db`, `n8n_db`, `metabase_app`
+  - Password: (from .env or default)
+  - Databases: `analytics`, `n8n`, `metabase`, `prefect`
+
+**Need remote access?** See the "Remote Access Options" section below or [SECURITY.md](SECURITY.md) for secure methods.
 
 ## 📊 Usage Examples
+
+### Using Prefect for Workflow Orchestration
+
+1. Open Prefect UI (http://localhost:4200)
+2. Create a simple Python flow:
+   ```python
+   from prefect import flow, task
+   
+   @task
+   def fetch_data():
+       # Your data fetching logic
+       return {"data": "example"}
+   
+   @task
+   def process_data(data):
+       # Process and transform data
+       return data
+   
+   @flow
+   def my_workflow():
+       data = fetch_data()
+       result = process_data(data)
+       return result
+   
+   if __name__ == "__main__":
+       my_workflow()
+   ```
+
+3. Deploy to Prefect server:
+   ```bash
+   prefect deploy
+   ```
 
 ### Connect Metabase to Your Analytics Database
 
 1. Open Metabase (http://localhost:3000)
 2. Add database connection:
    - **Type**: PostgreSQL
-   - **Host**: `postgres_main`
+   - **Host**: `postgres`
    - **Port**: `5432`
-   - **Database**: `analytics_db`
+   - **Database**: `analytics`
    - **Username**: `admin`
-   - **Password**: (from .env or default)
+   - **Password**: (from .env)
 
 ### Create n8n Workflow to Populate Database
 
@@ -102,23 +174,25 @@ After containers are running (give it 2-3 minutes):
 2. Create new workflow
 3. Add "PostgreSQL" node
 4. Configure connection:
-   - **Host**: `postgres_main`
-   - **Database**: `analytics_db`
+   - **Host**: `postgres`
+   - **Database**: `analytics`
    - **User**: `admin`
-   - **Password**: (from .env or default)
+   - **Password**: (from .env)
    - **Port**: `5432`
    - **SSL Mode**: `disable` (for local)
 
-### Example: API → n8n → PostgreSQL → Metabase
+### Example Workflows
 
+**Option 1: n8n for Simple Automation**
 ```
-[External API]
-      ↓
-  [n8n Workflow]
-      ↓ (transforms data)
-[PostgreSQL analytics_db.processed]
-      ↓ (queries)
-  [Metabase Dashboard]
+[External API] → [n8n Workflow] → [PostgreSQL analytics.data] → [Metabase Dashboard]
+```
+
+**Option 2: Prefect for Complex Orchestration**
+```
+[Prefect Flow] → [Python Tasks] → [PostgreSQL analytics.data] → [Metabase Dashboard]
+                      ↓
+              [n8n for Notifications]
 ```
 
 ## 🛠️ Management Commands
@@ -165,19 +239,19 @@ docker-compose up -d
 
 ```bash
 # Access PostgreSQL CLI
-docker exec -it postgres_main psql -U admin -d analytics_db
+docker exec -it postgres psql -U admin -d analytics
 
 # Create backup (Windows PowerShell)
-docker exec postgres_main pg_dump -U admin analytics_db > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres pg_dump -U admin analytics > ./backups/backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # Restore backup
-docker exec -i postgres_main psql -U admin -d analytics_db < ./backups/backup_20231020_120000.sql
+docker exec -i postgres psql -U admin -d analytics < ./backups/backup_20231020_120000.sql
 
 # Backup all databases (Windows PowerShell)
-docker exec postgres_main pg_dumpall -U admin > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+docker exec postgres pg_dumpall -U admin > ./backups/full_backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
 
 # List all databases
-docker exec -it postgres_main psql -U admin -c "\l"
+docker exec -it postgres psql -U admin -c "\l"
 ```
 
 ### Monitoring
@@ -195,13 +269,24 @@ docker network inspect self_hosted_analytics_stack-net
 
 ## 🔒 Security Best Practices
 
-1. **Change default passwords** in `.env` before first run
-2. **Use strong passwords** (20+ characters, mixed case, numbers, symbols)
-3. **Restrict network access** if exposing to internet
-4. **Regular backups** - schedule daily backups
+### For Localhost-Only Use (Default)
+
+✅ **Already secure:** Services bound to localhost only  
+✅ **Basic passwords OK:** Not exposed to network  
+⚠️ **Still recommended:** Set strong passwords in `.env` file
+
+### For Remote Access or Internet Exposure
+
+🚨 **CRITICAL - You MUST:**
+
+1. **Set strong passwords** in `.env` file (20+ characters, mixed case, numbers, symbols)
+2. **Use secure tunneling** (SSH, Cloudflare Tunnel, Tailscale) - see [SECURITY.md](SECURITY.md)
+3. **Enable HTTPS** if using reverse proxy
+4. **Regular backups** - schedule `backup.bat` with Task Scheduler
 5. **Update regularly** - `docker-compose pull && docker-compose up -d`
 6. **Monitor logs** - check for suspicious activity
-7. **Use reverse proxy** (Traefik/Nginx) with SSL for external access
+
+**For detailed security guidance, see [SECURITY.md](SECURITY.md)**
 
 ## 📈 Performance Tuning
 
@@ -227,6 +312,74 @@ JAVA_OPTS: -Xmx512m -Xms256m
 # Reduce resource limits across all services
 ```
 
+## 🔄 Upgrading Docker Images
+
+This stack uses **pinned versions** for stability and security:
+
+- `postgres:16-alpine` (pinned to major version 16)
+- `n8nio/n8n:1.115.3`
+- `metabase/metabase:latest` (update as needed)
+
+### How to Upgrade
+
+1. **Backup first!** Run `backup.bat`
+
+2. **Check for updates:**
+   - [PostgreSQL releases](https://hub.docker.com/_/postgres/tags?page=1&name=16)
+   - [n8n releases](https://hub.docker.com/r/n8nio/n8n/tags)
+   - [Metabase releases](https://hub.docker.com/r/metabase/metabase/tags)
+
+3. **Update versions in `docker-compose.yml`:**
+   ```yaml
+   image: postgres:16.5-alpine  # Update version number
+   ```
+
+4. **Apply updates:**
+   ```bash
+   docker-compose pull
+   docker-compose up -d
+   ```
+
+5. **Verify everything works:**
+   ```bash
+   docker-compose ps
+   docker-compose logs
+   ```
+
+⚠️ **Note:** Major version upgrades (e.g., Postgres 16 → 17) may require data migration. Always backup first!
+
+## 📋 Environment Variable Reference
+
+All configuration is managed via the `.env` file. Copy `.env.example` to `.env` and customize:
+
+### Database Connection
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_HOST` | `postgres` | PostgreSQL container hostname |
+| `POSTGRES_PORT` | `5432` | PostgreSQL port |
+| `POSTGRES_USER` | `admin` | Database superuser |
+| `POSTGRES_PASSWORD` | ⚠️ Required | Master database password |
+
+### Database Names
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POSTGRES_DB` | `analytics` | Main analytics database |
+| `POSTGRES_N8N_DB` | `n8n` | n8n workflow database |
+| `POSTGRES_METABASE_DB` | `metabase` | Metabase app database |
+| `POSTGRES_PREFECT_DB` | `prefect` | Prefect orchestration database |
+
+### Other Settings
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TZ` | `UTC` | Timezone for all services |
+| `N8N_PROTOCOL` | `http` | Protocol for n8n webhooks |
+| `N8N_HOST` | `localhost` | Hostname for n8n |
+| `WEBHOOK_URL` | `http://localhost:5678` | n8n webhook URL |
+| `MB_SITE_URL` | `http://localhost:3000` | Metabase site URL |
+| `PREFECT_API_URL` | `http://localhost:4200/api` | Prefect API URL |
+
+**Note:** All services share the same PostgreSQL credentials for simplicity. For advanced use cases, you can create separate database users with limited permissions.
+
 ## 🐛 Troubleshooting
 
 ### Services won't start
@@ -250,10 +403,10 @@ docker-compose up -d
 docker-compose ps postgres
 
 # Test connection
-docker exec postgres_main pg_isready -U streamline_user
+docker exec postgres pg_isready -U admin
 
 # Check database exists
-docker exec -it postgres_main psql -U streamline_user -d streamline_db -c "\l"
+docker exec -it postgres psql -U admin -d analytics -c "\l"
 ```
 
 ### n8n workflows timing out
@@ -282,14 +435,39 @@ echo Backup complete!
 
 Schedule with Windows Task Scheduler to run daily.
 
-## 🌐 External Access (Optional)
+## 🌐 Remote Access Options
 
-For secure external access, consider:
+By default, services are **only accessible from your computer**. To access from other devices:
 
-1. **Cloudflare Tunnel** (free, recommended)
-2. **Tailscale** (free for personal use)
-3. **Nginx Reverse Proxy** with Let's Encrypt SSL
-4. **Traefik** with automatic HTTPS
+### Recommended Methods
+
+1. **SSH Tunnel** (Most Secure)
+   ```bash
+   ssh -L 3000:127.0.0.1:3000 user@your-server
+   ```
+   Then access via `http://localhost:3000` on remote machine
+
+2. **Cloudflare Tunnel** (Easy & Free)
+   - Automatic HTTPS
+   - No firewall changes needed
+   - [Setup Guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/)
+
+3. **Tailscale** (Private Network)
+   - Create secure network between devices
+   - [Setup Guide](https://tailscale.com/kb/)
+
+4. **Reverse Proxy** (Advanced)
+   - Nginx or Traefik with Let's Encrypt
+   - Requires significant security configuration
+   - Only recommended for experienced users
+
+⚠️ **Security Warning:** Before exposing to internet:
+- Set strong passwords in `.env`
+- Enable HTTPS
+- Read [SECURITY.md](SECURITY.md) thoroughly
+
+**Need to temporarily expose Postgres for GUI tools?**
+See [SECURITY.md](SECURITY.md) for safe methods.
 
 ## 📚 Additional Resources
 
