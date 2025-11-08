@@ -12,10 +12,10 @@ echo Creating backups with timestamp: %timestamp%
 echo.
 
 REM Create backup directory if it doesn't exist
-if not exist "..\backups" mkdir "..\backups"
+if not exist "%~dp0..\backups" mkdir "%~dp0..\backups"
 
-echo [1/3] Backing up PostgreSQL databases...
-docker exec postgres pg_dumpall -U admin > ..\backups\backup_postgres_%timestamp%.sql
+echo [1/4] Backing up PostgreSQL databases...
+docker exec postgres pg_dumpall -U admin > "%~dp0..\backups\backup_postgres_%timestamp%.sql"
 if %errorlevel% neq 0 (
     echo ERROR: PostgreSQL backup failed!
     goto :error
@@ -23,8 +23,8 @@ if %errorlevel% neq 0 (
 echo ✓ PostgreSQL backup complete
 echo.
 
-echo [2/3] Backing up n8n volume (workflows and credentials)...
-docker run --rm -v n8n_data:/data -v %cd%\..\backups:/backup alpine tar czf /backup/backup_n8n_%timestamp%.tar.gz -C /data .
+echo [2/4] Backing up n8n volume (workflows and credentials)...
+docker run --rm -v n8n_data:/data -v "%~dp0..\backups":/backup alpine tar czf /backup/backup_n8n_%timestamp%.tar.gz -C /data .
 if %errorlevel% neq 0 (
     echo ERROR: n8n volume backup failed!
     goto :error
@@ -33,7 +33,7 @@ echo ✓ n8n volume backup complete
 echo.
 
 echo [3/4] Backing up Prefect volume...
-docker run --rm -v prefect_data:/data -v %cd%\..\backups:/backup alpine tar czf /backup/backup_prefect_%timestamp%.tar.gz -C /data .
+docker run --rm -v prefect_data:/data -v "%~dp0..\backups":/backup alpine tar czf /backup/backup_prefect_%timestamp%.tar.gz -C /data .
 if %errorlevel% neq 0 (
     echo ERROR: Prefect volume backup failed!
     goto :error
@@ -42,7 +42,7 @@ echo ✓ Prefect volume backup complete
 echo.
 
 echo [4/4] Backing up Airbyte volume (if configured)...
-docker run --rm -v airbyte_data:/data -v %cd%\..\backups:/backup alpine tar czf /backup/backup_airbyte_%timestamp%.tar.gz -C /data . 2>nul
+docker run --rm -v airbyte_data:/data -v "%~dp0..\backups":/backup alpine tar czf /backup/backup_airbyte_%timestamp%.tar.gz -C /data . 2>nul
 if %errorlevel% equ 0 (
     echo ✓ Airbyte volume backup complete
 ) else (
@@ -54,7 +54,7 @@ echo ========================================
 echo SUCCESS: All backups completed!
 echo ========================================
 echo.
-echo Backup files saved to: .\backups\
+echo Backup files saved to: %~dp0..\backups\
 echo   - backup_postgres_%timestamp%.sql
 echo   - backup_n8n_%timestamp%.tar.gz
 echo   - backup_prefect_%timestamp%.tar.gz
