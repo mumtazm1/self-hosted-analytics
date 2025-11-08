@@ -41,13 +41,13 @@ if %errorlevel% neq 0 (
 echo ✓ Prefect volume backup complete
 echo.
 
-echo [4/4] Backing up Airbyte volume...
-docker run --rm -v airbyte_data:/data -v %cd%\..\backups:/backup alpine tar czf /backup/backup_airbyte_%timestamp%.tar.gz -C /data .
-if %errorlevel% neq 0 (
-    echo ERROR: Airbyte volume backup failed!
-    goto :error
+echo [4/4] Backing up Airbyte volume (if configured)...
+docker run --rm -v airbyte_data:/data -v %cd%\..\backups:/backup alpine tar czf /backup/backup_airbyte_%timestamp%.tar.gz -C /data . 2>nul
+if %errorlevel% equ 0 (
+    echo ✓ Airbyte volume backup complete
+) else (
+    echo ℹ Airbyte not configured yet - skipping
 )
-echo ✓ Airbyte volume backup complete
 echo.
 
 echo ========================================
@@ -58,7 +58,7 @@ echo Backup files saved to: .\backups\
 echo   - backup_postgres_%timestamp%.sql
 echo   - backup_n8n_%timestamp%.tar.gz
 echo   - backup_prefect_%timestamp%.tar.gz
-echo   - backup_airbyte_%timestamp%.tar.gz
+echo   - backup_airbyte_%timestamp%.tar.gz (if Airbyte configured)
 echo.
 pause
 exit /b 0
