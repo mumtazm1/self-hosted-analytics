@@ -18,7 +18,7 @@ services:
       POSTGRES_MAX_CONNECTIONS: 100
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - ./backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-analytics}"]
@@ -179,6 +179,44 @@ services:
     networks:
       - stack-net
 
+  # ========================================
+  # Airbyte - Data Integration
+  # ========================================
+  airbyte:
+    image: airbyte/airbyte-standalone:latest
+    container_name: airbyte
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_USER: ${POSTGRES_USER:-admin}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
+      DATABASE_HOST: ${POSTGRES_HOST:-postgres}
+      DATABASE_PORT: ${POSTGRES_PORT:-5432}
+      DATABASE_DB: ${POSTGRES_AIRBYTE_DB:-airbyte}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - airbyte_data:/data
+      - ./shared:/shared
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - stack-net
+
 # ========================================
 # Named Volumes (External = Protected from deletion)
 # ========================================
@@ -188,6 +226,8 @@ volumes:
   n8n_data:
     external: true
   prefect_data:
+    external: true
+  airbyte_data:
     external: true
 
 # ========================================
