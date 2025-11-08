@@ -2,5 +2,5 @@
 echo Showing logs for all services...
 echo Press Ctrl+C to exit
 echo.
-docker-compose logs -f
+docker-compose -f ..\docker-compose.yml logs -f
 
