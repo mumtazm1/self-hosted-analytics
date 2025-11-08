@@ -15,10 +15,6 @@ GRANT ALL PRIVILEGES ON DATABASE metabase TO admin;
 CREATE DATABASE prefect;
 GRANT ALL PRIVILEGES ON DATABASE prefect TO admin;
 
--- Create Airbyte data integration database
-CREATE DATABASE airbyte;
-GRANT ALL PRIVILEGES ON DATABASE airbyte TO admin;
-
 -- Connect to main analytics database
 \c analytics;
 
@@ -49,5 +45,4 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA data TO admin;
 \echo '  - n8n (workflow automation)';
 \echo '  - metabase (analytics & BI)';
 \echo '  - prefect (workflow orchestration)';
-\echo '  - airbyte (data integration)';
 \echo '========================================';

@@ -179,46 +179,6 @@ services:
     networks:
       - stack-net
 
-  # ========================================
-  # Airbyte - Data Integration (READY TO ADD)
-  # ========================================
-  # NOTE: Airbyte requires their full docker-compose stack (multiple containers).
-  # To add Airbyte:
-  # 1. Download: curl -LO https://raw.githubusercontent.com/airbytehq/airbyte/master/run-ab-platform.sh
-  # 2. Run: ./run-ab-platform.sh -b
-  # 3. Access at: http://localhost:8000
-  # 
-  # Airbyte will use the 'airbyte' database we've already created in PostgreSQL.
-  # Your data is protected - the airbyte_data volume is external and backed up.
-  #
-  # Uncomment below if you find a single-container Airbyte solution:
-  # airbyte:
-  #   image: airbyte/server:latest  # Replace with actual image
-  #   container_name: airbyte
-  #   restart: unless-stopped
-  #   ports:
-  #     - "127.0.0.1:8000:8000"
-  #   environment:
-  #     DATABASE_USER: ${POSTGRES_USER:-admin}
-  #     DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
-  #     DATABASE_HOST: ${POSTGRES_HOST:-postgres}
-  #     DATABASE_PORT: ${POSTGRES_PORT:-5432}
-  #     DATABASE_DB: ${POSTGRES_AIRBYTE_DB:-airbyte}
-  #     TZ: ${TZ:-UTC}
-  #   volumes:
-  #     - airbyte_data:/data
-  #     - ./shared:/shared
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "10m"
-  #       max-file: "3"
-  #   networks:
-  #     - stack-net
-
 # ========================================
 # Named Volumes (External = Protected from deletion)
 # ========================================
@@ -228,8 +188,6 @@ volumes:
   n8n_data:
     external: true
   prefect_data:
-    external: true
-  airbyte_data:
     external: true
 
 # ========================================
