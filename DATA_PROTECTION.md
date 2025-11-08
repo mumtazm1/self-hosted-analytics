@@ -334,5 +334,3 @@ backup.bat
 
 **Last Updated:** November 8, 2025  
 **System Version:** With comprehensive backup/recovery  
-**Protection Level:** Maximum
-
