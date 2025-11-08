@@ -33,8 +33,8 @@ A lean, powerful stack combining PostgreSQL, n8n, and Metabase for personal anal
 │  │   n8n    │  │ Metabase │  │ Prefect  │            │
 │  │  :5678   │  │  :3000   │  │  :4200   │            │
 │  └─────┬────┘  └─────┬────┘  └─────┬────┘            │
-│        │             │              │                │
-│        └─────────────┼──────────────┘                │
+│        │             │             │                 │
+│        └─────────────┼─────────────┘                 │
 │                      │                               │
 │              ┌───────▼────────┐                      │
 │              │   PostgreSQL   │                      │
