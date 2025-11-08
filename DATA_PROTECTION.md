@@ -1,11 +1,5 @@
 # 🛡️ DATA PROTECTION SYSTEM
 
-## Overview
-
-This analytics stack is designed to **NEVER lose your data**, even if AI code changes or configuration errors occur. Multiple layers of protection ensure your n8n workflows, Metabase dashboards, and all data remain safe.
-
----
-
 ## 🔒 Protection Layers
 
 ### Layer 1: External Volumes (Primary Protection)
