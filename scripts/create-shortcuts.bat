@@ -24,4 +24,3 @@ echo - Analytics Stack - Stop
 echo - Analytics Stack - Status
 echo.
 pause
-
