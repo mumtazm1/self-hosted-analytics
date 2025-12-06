@@ -46,7 +46,7 @@ services:
   # n8n - Workflow Automation
   # ========================================
   n8n:
-    image: n8nio/n8n:1.115.3
+    image: n8nio/n8n:1.121.3
     container_name: n8n
     restart: unless-stopped
     ports:
@@ -70,6 +70,8 @@ services:
       EXECUTIONS_DATA_MAX_AGE: 168  # Keep execution data for 7 days
       N8N_LOG_LEVEL: info
       N8N_LOG_OUTPUT: console
+      # API Configuration (for workflow export/backup)
+      N8N_PUBLIC_API_ENABLED: "true"
       # Uncomment when using a domain/tunnel:
       # N8N_PROTOCOL: https
       # N8N_HOST: n8n.yourdomain.com
