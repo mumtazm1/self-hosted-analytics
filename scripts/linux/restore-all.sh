@@ -65,6 +65,12 @@ fi
 echo "Stopping services that depend on PostgreSQL..."
 docker_compose stop metabase prefect n8n
 
+echo "Dropping existing application databases for clean restore..."
+docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS metabase;"
+docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS prefect;"
+docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS n8n;"
+docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS analytics;"
+
 echo "Restoring PostgreSQL databases..."
 if ! cat "$BACKUP_DIR/$pg_backup_file" | docker exec -i postgres psql -U admin postgres; then
     error "PostgreSQL restore failed. Stopping recovery."
