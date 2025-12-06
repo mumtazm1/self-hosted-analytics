@@ -25,3 +25,11 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+.cursor
+
+# Personal HTML files (not for git publishing)
+www/
+my-scripts/
+
+# Personal docker-compose overrides
+docker-compose.personal.yml
