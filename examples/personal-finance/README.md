@@ -13,8 +13,10 @@ dashboard export need to be dropped in from a real working pipeline. See
 
 1. An n8n workflow runs on a schedule and pulls transaction data from a
    source (e.g. SimpleFin, Plaid, or a bank's CSV export).
-2. Rows land in `analytics.finance_transactions` in Postgres.
-3. A pre-built Metabase dashboard queries that table and shows:
+2. Rows land in the `finance` schema inside the `analytics` Postgres
+   database — three tables (`accounts`, `transactions`, `balance_snapshots`)
+   plus a `v_monthly_spending` view.
+3. A pre-built Metabase dashboard queries those tables and shows:
    - Monthly spending by category
    - Income vs expenses trend
    - Top merchants
@@ -24,7 +26,7 @@ dashboard export need to be dropped in from a real working pipeline. See
 
 | File                       | Purpose                                            |
 |----------------------------|----------------------------------------------------|
-| `schema.sql`               | Creates the `finance_transactions` table          |
+| `schema.sql`               | Creates the `finance` schema and its tables        |
 | `install.sh`               | Loads schema + imports n8n/Metabase JSON          |
 | `n8n-workflow.json`        | *(missing)* Sanitized n8n workflow export        |
 | `metabase-dashboard.json`  | *(missing)* Serialized Metabase dashboard        |
