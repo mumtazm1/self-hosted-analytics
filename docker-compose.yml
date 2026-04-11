@@ -126,7 +126,7 @@ services:
       - stack-net
 
   prefect:
-    image: prefecthq/prefect:2-latest
+    image: prefecthq/prefect:2.20.25-python3.11
     container_name: prefect
     restart: unless-stopped
     ports:
