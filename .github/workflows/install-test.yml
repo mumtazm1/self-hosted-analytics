@@ -1,0 +1,59 @@
+name: install-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Docker and Compose
+        run: |
+          docker version
+          docker compose version
+
+      - name: Run installer
+        run: ./install.sh
+
+      - name: Check services are healthy
+        run: |
+          set -e
+          for url in \
+            http://localhost:5678/healthz \
+            http://localhost:3000/api/health \
+            http://localhost:4200/api/health
+          do
+            echo "Checking $url"
+            for i in $(seq 1 30); do
+              if curl -fsS -o /dev/null "$url"; then
+                echo "  ok"
+                break
+              fi
+              if [ "$i" = "30" ]; then
+                echo "  FAILED after 30 tries"
+                exit 1
+              fi
+              sleep 4
+            done
+          done
+
+      - name: Postgres reachable
+        run: |
+          docker exec postgres pg_isready -U admin -d analytics
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --tail=200
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
