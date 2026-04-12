@@ -52,12 +52,12 @@ docker_compose stop n8n
 
 echo
 echo "Clearing n8n volume..."
-docker run --rm -v n8n_data:/data alpine sh -c "rm -rf /data/*"
+docker run --rm -v "$N8N_VOLUME":/data alpine sh -c "rm -rf /data/*"
 
 echo
 echo "Restoring n8n volume from backup..."
 if ! docker run --rm \
-    -v n8n_data:/data \
+    -v "$N8N_VOLUME":/data \
     -v "$BACKUP_DIR":/backup \
     alpine tar xzf "/backup/$backup_file" -C /data; then
     error "Restore failed!"
