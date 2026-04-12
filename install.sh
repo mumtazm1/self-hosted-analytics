@@ -63,8 +63,12 @@ say "Starting stack (this may take a few minutes on first run)"
 $COMPOSE up -d
 
 # ---------- wait for health ----------
+# name    = display label shown to the user
+# service = compose service name (used to compose log hints)
+# url     = health endpoint to poll
+# max     = number of polling iterations (2s apart)
 wait_for() {
-  local name="$1" url="$2" max="${3:-60}" i=0
+  local name="$1" service="$2" url="$3" max="${4:-60}" i=0
   say "Waiting for $name ($url)"
   while (( i < max )); do
     if curl -fsS -o /dev/null "$url"; then
@@ -74,13 +78,30 @@ wait_for() {
     sleep 2
     i=$(( i + 1 ))
   done
-  warn "$name did not become healthy within $(( max * 2 ))s. Check: $COMPOSE logs $name"
+  warn "$name did not become healthy within $(( max * 2 ))s. Check: $COMPOSE logs $service"
   return 1
 }
 
-wait_for "n8n"      "http://localhost:5678/healthz"        120 || true
-wait_for "metabase" "http://localhost:3000/api/health"     120 || true
-wait_for "prefect"  "http://localhost:4200/api/health"     120 || true
+failed_services=()
+wait_for "n8n"      "n8n"      "http://localhost:5678/healthz"    120 || failed_services+=("n8n")
+wait_for "Metabase" "metabase" "http://localhost:3000/api/health" 120 || failed_services+=("metabase")
+wait_for "Prefect"  "prefect"  "http://localhost:4200/api/health" 120 || failed_services+=("prefect")
+
+if (( ${#failed_services[@]} > 0 )); then
+  echo
+  echo "================================================================"
+  printf 'Install FAILED. These services did not become healthy: %s\n' "${failed_services[*]}"
+  echo
+  echo "Diagnose with:"
+  for svc in "${failed_services[@]}"; do
+    echo "  $COMPOSE logs $svc"
+  done
+  echo
+  echo "Stack is left running so you can inspect it."
+  echo "Tear down with:  $COMPOSE down -v"
+  echo "================================================================"
+  exit 1
+fi
 
 # ---------- summary ----------
 cat <<EOF
