@@ -52,12 +52,12 @@ docker_compose stop prefect
 
 echo
 echo "Clearing Prefect volume..."
-docker run --rm -v prefect_data:/data alpine sh -c "rm -rf /data/*"
+docker run --rm -v "$PREFECT_VOLUME":/data alpine sh -c "rm -rf /data/*"
 
 echo
 echo "Restoring Prefect volume from backup..."
 if ! docker run --rm \
-    -v prefect_data:/data \
+    -v "$PREFECT_VOLUME":/data \
     -v "$BACKUP_DIR":/backup \
     alpine tar xzf "/backup/$backup_file" -C /data; then
     error "Restore failed!"

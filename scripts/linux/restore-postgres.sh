@@ -53,14 +53,14 @@ docker_compose stop metabase prefect n8n
 
 echo
 echo "Dropping existing application databases for clean restore..."
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS metabase;"
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS prefect;"
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS n8n;"
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS analytics;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS metabase;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS prefect;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS n8n;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS analytics;"
 
 echo
 echo "Restoring PostgreSQL databases..."
-if ! cat "$BACKUP_DIR/$backup_file" | docker exec -i postgres psql -U admin postgres; then
+if ! cat "$BACKUP_DIR/$backup_file" | docker exec -i "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" postgres; then
     error "Restore failed!"
     echo
     echo "Restarting services..."

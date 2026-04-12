@@ -21,7 +21,7 @@ echo
 ensure_backup_dir
 
 echo "[1/3] Backing up PostgreSQL databases..."
-if ! docker exec postgres pg_dumpall -U admin > "$BACKUP_DIR/backup_postgres_${timestamp}.sql"; then
+if ! docker exec "$POSTGRES_CONTAINER" pg_dumpall -U "$POSTGRES_USER" > "$BACKUP_DIR/backup_postgres_${timestamp}.sql"; then
     error "PostgreSQL backup failed!"
     exit 1
 fi
@@ -30,7 +30,7 @@ echo
 
 echo "[2/3] Backing up n8n volume (workflows and credentials)..."
 if ! docker run --rm \
-    -v n8n_data:/data \
+    -v "$N8N_VOLUME":/data \
     -v "$BACKUP_DIR":/backup \
     alpine tar czf "/backup/backup_n8n_${timestamp}.tar.gz" -C /data .; then
     error "n8n volume backup failed!"
@@ -41,7 +41,7 @@ echo
 
 echo "[3/3] Backing up Prefect volume..."
 if ! docker run --rm \
-    -v prefect_data:/data \
+    -v "$PREFECT_VOLUME":/data \
     -v "$BACKUP_DIR":/backup \
     alpine tar czf "/backup/backup_prefect_${timestamp}.tar.gz" -C /data .; then
     error "Prefect volume backup failed!"

@@ -11,6 +11,29 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 BACKUP_DIR="$PROJECT_ROOT/backups"
 
+# Load .env so scripts use the same secrets and names the stack was
+# installed with. Falls back to defaults if .env is missing (pre-install).
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
+: "${COMPOSE_PROJECT_NAME:=sha}"
+: "${POSTGRES_HOST:=postgres}"
+: "${POSTGRES_USER:=admin}"
+: "${POSTGRES_DB:=analytics}"
+
+# Container name is the compose service's container_name, which defaults
+# to ${POSTGRES_HOST}. Keep these two in lockstep if you rename either.
+POSTGRES_CONTAINER="${POSTGRES_HOST}"
+
+# Named volumes scoped to the project name. Must match docker-compose.yml.
+N8N_VOLUME="${COMPOSE_PROJECT_NAME}_n8n_data"
+PREFECT_VOLUME="${COMPOSE_PROJECT_NAME}_prefect_data"
+POSTGRES_VOLUME="${COMPOSE_PROJECT_NAME}_postgres_data"
+
 # Detect docker compose command (v2 vs v1)
 if docker compose version &>/dev/null; then
     DOCKER_COMPOSE="docker compose"
@@ -79,7 +102,7 @@ wait_for_postgres() {
     local max_attempts=30
     local attempt=1
     while [[ $attempt -le $max_attempts ]]; do
-        if docker exec postgres pg_isready -U admin &>/dev/null; then
+        if docker exec "$POSTGRES_CONTAINER" pg_isready -U "$POSTGRES_USER" &>/dev/null; then
             success "PostgreSQL is ready"
             return 0
         fi
