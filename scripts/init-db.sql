@@ -3,24 +3,17 @@
 -- Creates application databases for the analytics stack
 -- =========================================
 
--- Create n8n workflow automation database
+-- Application databases. CREATE DATABASE makes the connecting role
+-- (POSTGRES_USER, whatever the operator set) the owner, so no explicit
+-- GRANTs are needed, and hardcoding a role name here would silently
+-- fail for anyone who set POSTGRES_USER to something other than admin.
 CREATE DATABASE n8n;
-GRANT ALL PRIVILEGES ON DATABASE n8n TO admin;
-
--- Create Metabase analytics app database
 CREATE DATABASE metabase;
-GRANT ALL PRIVILEGES ON DATABASE metabase TO admin;
-
--- Create Prefect workflow orchestration database
 CREATE DATABASE prefect;
-GRANT ALL PRIVILEGES ON DATABASE prefect TO admin;
 
--- Connect to main analytics database
+-- Switch to the main analytics database and add a utility schema.
 \c analytics;
-
--- Create schema for storing processed/transformed data
 CREATE SCHEMA IF NOT EXISTS data;
-GRANT ALL ON SCHEMA data TO admin;
 
 -- Example: Create a logs table for workflow execution logs
 CREATE TABLE IF NOT EXISTS data.workflow_logs (
@@ -32,9 +25,6 @@ CREATE TABLE IF NOT EXISTS data.workflow_logs (
     metadata JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA data TO admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA data TO admin;
 
 -- Print confirmation
 \echo '========================================';

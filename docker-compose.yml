@@ -1,18 +1,14 @@
 services:
-  # ========================================
-  # PostgreSQL - Central Database
-  # ========================================
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     container_name: ${POSTGRES_HOST:-postgres}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER not set - run ./install.sh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD not set - run ./install.sh}
       POSTGRES_DB: ${POSTGRES_DB:-analytics}
-      # Performance tuning for personal use
       POSTGRES_SHARED_BUFFERS: 256MB
       POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
       POSTGRES_MAX_CONNECTIONS: 100
@@ -21,7 +17,7 @@ services:
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
       - ./backups:/backups
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-analytics}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-analytics}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,9 +38,6 @@ services:
     networks:
       - stack-net
 
-  # ========================================
-  # n8n - Workflow Automation
-  # ========================================
   n8n:
     image: n8nio/n8n:1.121.3
     container_name: n8n
@@ -56,26 +49,18 @@ services:
       TZ: ${TZ:-UTC}
       N8N_RUNNERS_ENABLED: "true"
       N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
-      # Database configuration - Using SQLite (keeps existing workflows)
-      # To use PostgreSQL instead, uncomment lines below and comment DB_TYPE: sqlite
-      DB_TYPE: sqlite
-      #DB_TYPE: postgresdb
-      #DB_POSTGRESDB_HOST: ${POSTGRES_HOST:-postgres}
-      #DB_POSTGRESDB_PORT: ${POSTGRES_PORT:-5432}
-      #DB_POSTGRESDB_DATABASE: ${POSTGRES_N8N_DB:-n8n}
-      #DB_POSTGRESDB_USER: ${POSTGRES_USER:-admin}
-      #DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
-      # Performance & Features
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: ${POSTGRES_HOST:-postgres}
+      DB_POSTGRESDB_PORT: ${POSTGRES_PORT:-5432}
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_N8N_DB:-n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?N8N_ENCRYPTION_KEY not set - run ./install.sh}
       EXECUTIONS_DATA_PRUNE: "true"
-      EXECUTIONS_DATA_MAX_AGE: 168  # Keep execution data for 7 days
+      EXECUTIONS_DATA_MAX_AGE: 168
       N8N_LOG_LEVEL: info
       N8N_LOG_OUTPUT: console
-      # API Configuration (for workflow export/backup)
       N8N_PUBLIC_API_ENABLED: "true"
-      # Uncomment when using a domain/tunnel:
-      # N8N_PROTOCOL: https
-      # N8N_HOST: n8n.yourdomain.com
-      # WEBHOOK_URL: https://n8n.yourdomain.com
     volumes:
       - n8n_data:/home/node/.n8n
       - ./shared:/shared
@@ -98,11 +83,8 @@ services:
     networks:
       - stack-net
 
-  # ========================================
-  # Metabase - Analytics & BI
-  # ========================================
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.55.23
     container_name: metabase
     restart: unless-stopped
     ports:
@@ -111,20 +93,22 @@ services:
       MB_DB_TYPE: postgres
       MB_DB_DBNAME: ${POSTGRES_METABASE_DB:-metabase}
       MB_DB_PORT: ${POSTGRES_PORT:-5432}
-      MB_DB_USER: ${POSTGRES_USER:-admin}
-      MB_DB_PASS: ${POSTGRES_PASSWORD:-INSECURE_DEFAULT_CHANGE_ME}
+      MB_DB_USER: ${POSTGRES_USER}
+      MB_DB_PASS: ${POSTGRES_PASSWORD}
       MB_DB_HOST: ${POSTGRES_HOST:-postgres}
-      # Java/Performance settings
       JAVA_OPTS: -Xmx1g -Xms512m
-      # Jetty settings
       MB_JETTY_PORT: 3000
-      # Optional: Set site URL when using domain
-      # MB_SITE_URL: http://localhost:3000
     volumes:
       - ./shared:/shared
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
     logging:
       driver: "json-file"
       options:
@@ -141,22 +125,16 @@ services:
     networks:
       - stack-net
 
-  # ========================================
-  # Prefect - Workflow Orchestration
-  # ========================================
   prefect:
-    image: prefecthq/prefect:2-latest
+    image: prefecthq/prefect:2.20.25-python3.11
     container_name: prefect
     restart: unless-stopped
     ports:
       - "127.0.0.1:4200:4200"
     environment:
-      # Database configuration
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_PREFECT_DB:-prefect}
-      # Server configuration
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_PREFECT_DB:-prefect}
       PREFECT_SERVER_API_HOST: 0.0.0.0
       PREFECT_API_URL: ${PREFECT_API_URL:-http://localhost:4200/api}
-      # Timezone
       TZ: ${TZ:-UTC}
     volumes:
       - prefect_data:/root/.prefect
@@ -165,6 +143,12 @@ services:
       postgres:
         condition: service_healthy
     command: prefect server start
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:4200/api/health').getcode()==200 else sys.exit(1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     logging:
       driver: "json-file"
       options:
@@ -181,23 +165,14 @@ services:
     networks:
       - stack-net
 
-# ========================================
-# Named Volumes (External = Protected from deletion)
-# ========================================
 volumes:
   postgres_data:
-    external: true
+    name: ${COMPOSE_PROJECT_NAME:-sha}_postgres_data
   n8n_data:
-    external: true
+    name: ${COMPOSE_PROJECT_NAME:-sha}_n8n_data
   prefect_data:
-    external: true
+    name: ${COMPOSE_PROJECT_NAME:-sha}_prefect_data
 
-# ========================================
-# Network Configuration
-# ========================================
 networks:
   stack-net:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
