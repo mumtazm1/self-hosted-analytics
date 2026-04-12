@@ -2,6 +2,11 @@
 # One-command installer for the self-hosted analytics stack.
 # Idempotent: safe to re-run. Generates real secrets on first run,
 # re-uses the existing .env on subsequent runs.
+#
+# Flags:
+#   --fresh    Ignore any existing pre-rename volumes and install clean.
+#   --upgrade  Print migration instructions and exit. Does NOT migrate
+#              automatically — see UPGRADING.md.
 
 set -euo pipefail
 
@@ -11,6 +16,18 @@ cd "$SCRIPT_DIR"
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!!\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[1;31mxxx\033[0m %s\n' "$*" >&2; exit 1; }
+
+FLAG_FRESH=0
+FLAG_UPGRADE=0
+for arg in "$@"; do
+  case "$arg" in
+    --fresh)   FLAG_FRESH=1 ;;
+    --upgrade) FLAG_UPGRADE=1 ;;
+    -h|--help)
+      sed -n '2,11p' "$0"; exit 0 ;;
+    *) die "Unknown flag: $arg (see --help)" ;;
+  esac
+done
 
 # ---------- preflight ----------
 command -v docker >/dev/null 2>&1 || die "Docker is not installed. See https://docs.docker.com/get-docker/"
@@ -23,6 +40,63 @@ else
   die "docker compose (v2) or docker-compose (v1) is required."
 fi
 command -v openssl >/dev/null 2>&1 || die "openssl is required for secret generation."
+
+# ---------- detect pre-rename volumes (data-loss guard) ----------
+# Older revisions of this repo used globally-named external volumes
+# (postgres_data, n8n_data, prefect_data). This branch renamed them to
+# ${COMPOSE_PROJECT_NAME}_*. Running 'docker compose up -d' after a git
+# pull would silently create fresh empty volumes and the user would
+# think their data vanished. Detect the old ones and refuse to proceed
+# unless the operator explicitly says "fresh" or follows UPGRADING.md.
+OLD_VOLUMES=()
+for v in postgres_data n8n_data prefect_data; do
+  if docker volume inspect "$v" >/dev/null 2>&1; then
+    OLD_VOLUMES+=("$v")
+  fi
+done
+
+if (( ${#OLD_VOLUMES[@]} > 0 )) && (( FLAG_FRESH == 0 )); then
+  cat >&2 <<EOF
+================================================================
+WARNING: found pre-rename data volumes on this machine:
+  ${OLD_VOLUMES[*]}
+
+These look like data from an earlier version of this stack, before
+volumes were renamed to \${COMPOSE_PROJECT_NAME}_*. If you continue
+with a default install, you will get FRESH EMPTY volumes and your
+existing n8n workflows / Prefect state / Postgres data will appear
+to have vanished (the old volumes stay on disk but unreferenced).
+
+Read UPGRADING.md in this repo for the two supported paths:
+  1. Keep your data by pointing the new stack at the old volume names.
+  2. Start fresh and restore from a pg_dumpall backup.
+
+If you know what you're doing and want to install fresh anyway,
+re-run with:
+  ./install.sh --fresh
+================================================================
+EOF
+  exit 2
+fi
+
+if (( FLAG_UPGRADE == 1 )); then
+  cat <<EOF
+See UPGRADING.md for migration instructions.
+Quick summary of the two supported paths:
+
+  1. Preserve data:
+     - Keep your old volumes as-is.
+     - Add a docker-compose.upgrade.yml override that maps the new
+       named volumes to the old globally-named ones.
+     - Example is in UPGRADING.md.
+
+  2. Start fresh (destroys existing data):
+     - Back up first:   ./scripts/linux/backup.sh
+     - Remove old:      docker volume rm postgres_data n8n_data prefect_data
+     - Install clean:   ./install.sh --fresh
+EOF
+  exit 0
+fi
 
 # ---------- directories ----------
 say "Creating data directories"

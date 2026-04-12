@@ -55,6 +55,18 @@ that turn empty infra into something useful on day one. See [`examples/`](exampl
 If you've built your own pipeline on top of this stack, PRs for new examples
 are welcome.
 
+## Upgrading from an earlier version
+
+If you were running this stack before the `install.sh` / volume-rename
+release, **do not just `git pull && docker compose up -d`** — volume
+names changed, so a naive upgrade will create fresh empty volumes and
+make your data look like it vanished. `install.sh` detects the old
+volumes and refuses to proceed unless you explicitly opt in.
+
+Two supported upgrade paths are documented in [`UPGRADING.md`](UPGRADING.md):
+preserve your existing data via a small override file, or back up + wipe
++ restore. Path 1 is safer, path 2 is cleaner.
+
 ## Day-to-day
 
 ```bash
