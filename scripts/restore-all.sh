@@ -66,13 +66,13 @@ echo "Stopping services that depend on PostgreSQL..."
 docker_compose stop metabase prefect n8n
 
 echo "Dropping existing application databases for clean restore..."
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS metabase;"
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS prefect;"
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS n8n;"
-docker exec postgres psql -U admin -d postgres -c "DROP DATABASE IF EXISTS analytics;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS metabase;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS prefect;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS n8n;"
+docker exec "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS analytics;"
 
 echo "Restoring PostgreSQL databases..."
-if ! cat "$BACKUP_DIR/$pg_backup_file" | docker exec -i postgres psql -U admin postgres; then
+if ! cat "$BACKUP_DIR/$pg_backup_file" | docker exec -i "$POSTGRES_CONTAINER" psql -U "$POSTGRES_USER" postgres; then
     error "PostgreSQL restore failed. Stopping recovery."
     pause
     exit 1
@@ -104,11 +104,11 @@ else
             docker_compose stop n8n
 
             echo "Clearing n8n volume..."
-            docker run --rm -v n8n_data:/data alpine sh -c "rm -rf /data/*"
+            docker run --rm -v "$N8N_VOLUME":/data alpine sh -c "rm -rf /data/*"
 
             echo "Restoring n8n volume..."
             if docker run --rm \
-                -v n8n_data:/data \
+                -v "$N8N_VOLUME":/data \
                 -v "$BACKUP_DIR":/backup \
                 alpine tar xzf "/backup/$n8n_backup_file" -C /data; then
                 success "n8n restored"
@@ -148,11 +148,11 @@ else
             docker_compose stop prefect
 
             echo "Clearing Prefect volume..."
-            docker run --rm -v prefect_data:/data alpine sh -c "rm -rf /data/*"
+            docker run --rm -v "$PREFECT_VOLUME":/data alpine sh -c "rm -rf /data/*"
 
             echo "Restoring Prefect volume..."
             if docker run --rm \
-                -v prefect_data:/data \
+                -v "$PREFECT_VOLUME":/data \
                 -v "$BACKUP_DIR":/backup \
                 alpine tar xzf "/backup/$prefect_backup_file" -C /data; then
                 success "Prefect restored"
