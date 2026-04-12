@@ -17,17 +17,52 @@ say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m!!!\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[1;31mxxx\033[0m %s\n' "$*" >&2; exit 1; }
 
+print_help() {
+  cat <<'HELP'
+Usage: ./install.sh [--fresh|--upgrade|--help]
+
+One-command installer for the self-hosted analytics stack.
+Idempotent: safe to re-run. Generates real secrets on first run,
+re-uses the existing .env on subsequent runs.
+
+Flags:
+  --fresh    Ignore any existing pre-rename volumes and install clean.
+  --upgrade  Print migration instructions and exit. Does NOT migrate
+             automatically — see UPGRADING.md.
+  --help     Print this help.
+HELP
+}
+
 FLAG_FRESH=0
 FLAG_UPGRADE=0
 for arg in "$@"; do
   case "$arg" in
     --fresh)   FLAG_FRESH=1 ;;
     --upgrade) FLAG_UPGRADE=1 ;;
-    -h|--help)
-      sed -n '2,11p' "$0"; exit 0 ;;
+    -h|--help) print_help; exit 0 ;;
     *) die "Unknown flag: $arg (see --help)" ;;
   esac
 done
+
+# --upgrade short-circuits everything else — it's pure docs.
+if (( FLAG_UPGRADE == 1 )); then
+  cat <<EOF
+See UPGRADING.md for migration instructions.
+Quick summary of the two supported paths:
+
+  1. Preserve data:
+     - Keep your old volumes as-is.
+     - Add a docker-compose.upgrade.yml override that maps the new
+       named volumes to the old globally-named ones.
+     - Example is in UPGRADING.md.
+
+  2. Start fresh (destroys existing data):
+     - Back up first:   ./scripts/linux/backup.sh
+     - Remove old:      docker volume rm postgres_data n8n_data prefect_data
+     - Install clean:   ./install.sh --fresh
+EOF
+  exit 0
+fi
 
 # ---------- preflight ----------
 command -v docker >/dev/null 2>&1 || die "Docker is not installed. See https://docs.docker.com/get-docker/"
@@ -77,25 +112,6 @@ re-run with:
 ================================================================
 EOF
   exit 2
-fi
-
-if (( FLAG_UPGRADE == 1 )); then
-  cat <<EOF
-See UPGRADING.md for migration instructions.
-Quick summary of the two supported paths:
-
-  1. Preserve data:
-     - Keep your old volumes as-is.
-     - Add a docker-compose.upgrade.yml override that maps the new
-       named volumes to the old globally-named ones.
-     - Example is in UPGRADING.md.
-
-  2. Start fresh (destroys existing data):
-     - Back up first:   ./scripts/linux/backup.sh
-     - Remove old:      docker volume rm postgres_data n8n_data prefect_data
-     - Install clean:   ./install.sh --fresh
-EOF
-  exit 0
 fi
 
 # ---------- directories ----------
