@@ -47,10 +47,10 @@ databases), so a single `pg_dump` captures everything.
 The stack is the plumbing. The real value is opinionated end-to-end examples
 that turn empty infra into something useful on day one. See [`examples/`](examples/):
 
-- **`examples/personal-finance/`** — pull transactions via n8n, land them in
-  Postgres, explore with a pre-built Metabase dashboard. *(In progress — see
-  the example's own README for what's wired up and what still needs a real
-  pipeline.)*
+- **`examples/personal-finance/`** — scaffold for a future pipeline
+  (schema + installer stub). n8n workflow and Metabase dashboard still
+  TBD; see the example's own [README](examples/personal-finance/README.md)
+  for what's there and what isn't.
 
 If you've built your own pipeline on top of this stack, PRs for new examples
 are welcome.

@@ -15,6 +15,9 @@ fi
 set -a; source .env; set +a
 
 echo "==> Loading schema into analytics database"
+# POSTGRES_HOST doubles as the postgres container name — docker-compose.yml
+# sets container_name: ${POSTGRES_HOST:-postgres}. Keep these in lockstep
+# if you rename either.
 docker exec -i "${POSTGRES_HOST:-postgres}" \
   psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB:-analytics}" \
   < "$SCRIPT_DIR/schema.sql"
