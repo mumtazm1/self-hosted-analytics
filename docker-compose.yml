@@ -39,7 +39,7 @@ services:
       - stack-net
 
   n8n:
-    image: n8nio/n8n:1.121.3
+    image: n8nio/n8n:2.15.1
     container_name: n8n
     restart: unless-stopped
     ports:
@@ -84,7 +84,7 @@ services:
       - stack-net
 
   metabase:
-    image: metabase/metabase:v0.55.23
+    image: metabase/metabase:v0.59.6
     container_name: metabase
     restart: unless-stopped
     ports:
