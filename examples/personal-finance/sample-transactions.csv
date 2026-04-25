@@ -1,0 +1,21 @@
+id,account_id,posted_at,amount,description,merchant,category
+csv-001,acme-checking,2026-05-01 09:10:00+00,-89.40,Weekly groceries,Sample Grocer,Groceries
+csv-002,demo-credit,2026-05-02 18:30:00+00,-44.20,Dinner with team,Demo Diner,Dining
+csv-003,acme-checking,2026-05-03 14:00:00+00,-91.60,Electric bill,Acme Utilities,Utilities
+csv-004,demo-credit,2026-05-04 11:00:00+00,-9.99,Streaming service,Mock Stream Co,Subscriptions
+csv-005,demo-credit,2026-05-05 13:25:00+00,-42.80,Gas,Sample Fuel,Transportation
+csv-006,acme-checking,2026-05-08 17:45:00+00,2800.00,Paycheck,Acme Employer,Income
+csv-007,demo-credit,2026-05-09 12:15:00+00,-18.90,Coffee + bagel,Sample Coffee Co,Dining
+csv-008,demo-credit,2026-05-10 20:00:00+00,-65.30,Movie night,Demo Entertainment,Entertainment
+csv-009,demo-credit,2026-05-12 16:40:00+00,-138.00,New running shoes,Mock Marketplace,Shopping
+csv-010,acme-checking,2026-05-15 09:00:00+00,-78.20,Weekly groceries,Sample Grocer,Groceries
+csv-011,demo-credit,2026-05-16 19:30:00+00,-52.10,Dinner out,Demo Diner,Dining
+csv-012,demo-credit,2026-05-19 13:25:00+00,-40.20,Gas,Sample Fuel,Transportation
+csv-013,acme-checking,2026-05-22 17:45:00+00,2800.00,Paycheck,Acme Employer,Income
+csv-014,demo-credit,2026-05-23 21:00:00+00,-32.00,Concert tickets,Demo Entertainment,Entertainment
+csv-015,acme-checking,2026-05-24 09:30:00+00,-94.10,Weekly groceries,Sample Grocer,Groceries
+csv-016,demo-credit,2026-05-25 12:30:00+00,-22.50,Lunch,Sample Coffee Co,Dining
+csv-017,demo-credit,2026-05-27 18:00:00+00,-58.40,Dinner out,Demo Diner,Dining
+csv-018,demo-credit,2026-05-28 14:00:00+00,-9.99,Streaming service,Mock Stream Co,Subscriptions
+csv-019,demo-credit,2026-05-30 16:00:00+00,-205.00,Spring jacket + pants,Mock Marketplace,Shopping
+csv-020,acme-checking,2026-05-31 23:59:00+00,-86.40,Weekly groceries,Sample Grocer,Groceries
