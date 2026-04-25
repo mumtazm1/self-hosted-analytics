@@ -3,6 +3,26 @@
 # Assumes the main stack has been started via the repo root install.sh.
 
 set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [--with-sample-data] [--help]
+
+  --with-sample-data   Also load 50 synthetic transactions and balance
+                       snapshots from seed.sql so the dashboard renders
+                       immediately. Safe to re-run; truncates first.
+  --help               Show this message.
+EOF
+}
+
+WITH_SAMPLE_DATA=0
+case "${1:-}" in
+  --with-sample-data) WITH_SAMPLE_DATA=1 ;;
+  --help|-h)          usage; exit 0 ;;
+  "")                 ;;
+  *)                  usage >&2; exit 2 ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$ROOT_DIR"
@@ -14,32 +34,30 @@ fi
 # shellcheck disable=SC1091
 set -a; source .env; set +a
 
-echo "==> Loading schema into analytics database"
 # POSTGRES_HOST doubles as the postgres container name. docker-compose.yml
 # sets container_name: ${POSTGRES_HOST:-postgres}. Keep these in lockstep
 # if you rename either.
-docker exec -i "${POSTGRES_HOST:-postgres}" \
-  psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB:-analytics}" \
-  < "$SCRIPT_DIR/schema.sql"
+PG_CONTAINER="${POSTGRES_HOST:-postgres}"
+PG_USER="${POSTGRES_USER}"
+PG_DB="${POSTGRES_DB:-analytics}"
 
-if [[ -f "$SCRIPT_DIR/n8n-workflow.json" ]]; then
-  echo "==> Importing n8n workflow"
-  echo "    TODO: hit n8n public API at http://localhost:5678/api/v1/workflows"
-  echo "    Currently a manual step: open n8n UI, Import from File, select:"
-  echo "    $SCRIPT_DIR/n8n-workflow.json"
-else
-  echo "!!! n8n-workflow.json not present yet. Skipping n8n import."
+echo "==> Loading schema into ${PG_DB} database"
+docker exec -i "$PG_CONTAINER" psql -U "$PG_USER" -d "$PG_DB" < "$SCRIPT_DIR/schema.sql"
+
+if [[ "$WITH_SAMPLE_DATA" -eq 1 ]]; then
+  echo "==> Loading seed data (50 sample transactions across 6 months)"
+  docker exec -i "$PG_CONTAINER" psql -U "$PG_USER" -d "$PG_DB" < "$SCRIPT_DIR/seed.sql"
 fi
 
-if [[ -f "$SCRIPT_DIR/metabase-dashboard.json" ]]; then
-  echo "==> Importing Metabase dashboard"
-  echo "    TODO: hit Metabase serialization endpoint"
-  echo "    Currently a manual step: open Metabase, Settings > Admin > Serialization"
+if [[ -f "$SCRIPT_DIR/n8n-workflow.json" ]]; then
+  echo "==> n8n workflow JSON found at $SCRIPT_DIR/n8n-workflow.json"
+  echo "    Import manually: n8n UI (http://localhost:5678) -> Workflows -> Import from File"
 else
-  echo "!!! metabase-dashboard.json not present yet. Skipping Metabase import."
+  echo "    n8n-workflow.json not present. See README for the workflow walkthrough."
 fi
 
 echo ""
 echo "Done. The finance schema is loaded."
-echo "Open Metabase at http://localhost:3000 and point a new dashboard at"
-echo "the 'finance' schema in the 'analytics' database."
+echo "Next: open Metabase (http://localhost:3000), connect to the 'analytics'"
+echo "database, and follow examples/personal-finance/README.md to build the"
+echo "dashboard from dashboard-queries.sql."
