@@ -1,38 +1,39 @@
 -- Dashboard queries for the personal-finance example.
 --
--- These four queries power the "Finance Overview" Metabase dashboard
--- shown in docs/screenshots/finance-dashboard.png. Each one is meant
--- to be pasted as its own Native (SQL) Question in Metabase. See
--- README.md in this directory for the full walkthrough.
+-- Four Native Questions for Metabase. See examples/personal-finance/README.md
+-- for the recreation walkthrough.
 
 
 -- 1. Monthly spending (bar chart)
--- Spend by month, excluding income and pending transactions.
 SELECT
     date_trunc('month', posted_at)::date AS month,
     SUM(-amount) AS spent
 FROM finance.transactions
 WHERE pending = false
   AND amount < 0
+  AND category <> 'Transfer'
 GROUP BY 1
 ORDER BY 1;
 
 
 -- 2. Top categories, last 90 days (pie or row chart)
+-- Anchored to the latest transaction so it works against fixed seed data
+-- as well as a live pipeline.
 SELECT
     category,
     SUM(-amount) AS spent
 FROM finance.transactions
 WHERE pending = false
   AND amount < 0
-  AND posted_at >= now() - interval '90 days'
+  AND category <> 'Transfer'
+  AND posted_at >= (SELECT MAX(posted_at) FROM finance.transactions) - interval '90 days'
 GROUP BY 1
 ORDER BY spent DESC;
 
 
 -- 3. Recent transactions (table)
 SELECT
-    posted_at::date AS date,
+    posted_at::date AS day,
     merchant,
     category,
     amount,
@@ -46,7 +47,7 @@ LIMIT 25;
 
 -- 4. Balance trend by account (line chart)
 SELECT
-    snapshot_at::date AS date,
+    snapshot_at::date AS day,
     a.name AS account,
     balance
 FROM finance.balance_snapshots b

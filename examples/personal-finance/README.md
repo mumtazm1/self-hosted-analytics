@@ -1,41 +1,82 @@
 # Example: Personal Finance
 
-Schema and installer stub for tracking personal transactions. The
-pipeline (n8n workflow) and dashboard (Metabase export) are coming.
-for now this sets up the database tables so you can wire your own
-data source.
+A `finance` schema in the `analytics` database, plus seed data and SQL
+queries for a Metabase dashboard. Build the dashboard once and you have
+a place to point real ingestion at — n8n from a CSV, a Python script
+from SimpleFin/Plaid, whatever.
 
 ## What's here
 
-| File          | Purpose                                          |
-|---------------|--------------------------------------------------|
-| `schema.sql`  | Creates the `finance` schema with three tables   |
-| `install.sh`  | Loads the schema into a running stack             |
+| File                   | Purpose                                                             |
+|------------------------|---------------------------------------------------------------------|
+| `schema.sql`           | Creates the `finance` schema and three tables                       |
+| `seed.sql`             | Synthetic transactions (6 months, 3 accounts) and derived snapshots |
+| `dashboard-queries.sql`| Four Native SQL queries that power the Metabase dashboard           |
+| `install.sh`           | Loads the schema (and optionally seed) into a running stack         |
 
 ## Schema
 
-`schema.sql` creates a `finance` schema in the `analytics` database:
+`schema.sql` creates:
 
-- `finance.accounts` - bank/brokerage accounts
-- `finance.transactions` - individual transactions with category, merchant, amount
-- `finance.balance_snapshots` - point-in-time balances per account
-- `finance.v_monthly_spending` - view that aggregates spending by month and category
+- `finance.accounts` — one row per bank/brokerage/credit account
+- `finance.transactions` — individual transactions (amount negative for
+  spending, positive for income)
+- `finance.balance_snapshots` — point-in-time balances per account
+- `finance.v_monthly_spending` — view aggregating spending by month and
+  category
 
 ## Install
 
-Requires the main stack to be running first (`./install.sh` from repo root).
+The main stack must be running first (`./install.sh` from the repo root).
 
 ```bash
-cd examples/personal-finance
-./install.sh
+# Schema only:
+./examples/personal-finance/install.sh
+
+# Schema + 6 months of synthetic data so the dashboard renders immediately:
+./examples/personal-finance/install.sh --with-sample-data
 ```
 
-## Next steps
+`--with-sample-data` refuses to run if `finance.*` already contains rows.
+Pass `--force` to truncate and reseed.
 
-Once the schema is loaded, connect your own data source:
+## Build the dashboard
 
-- **SimpleFin / Plaid:** set up an n8n workflow that pulls transactions
-  on a schedule and inserts into `finance.transactions`
-- **CSV import:** write a quick Python script or use n8n's file-read node
-- **Metabase:** point a new dashboard at the `finance` schema and build
-  the charts you care about
+Metabase OSS doesn't have a clean dashboard import path (serialization
+exports YAML directories and the import API is gated to Pro), so the
+dashboard is built once by hand from `dashboard-queries.sql`. Five
+minutes of clicking, then it's done.
+
+1. Open Metabase at the URL printed by `./install.sh` (default
+   `http://localhost:3000`). Connect to the `analytics` database if you
+   haven't already.
+2. For each of the four queries in `dashboard-queries.sql`:
+   - **+ New** → **SQL query** → pick the `analytics` database
+   - Paste the query
+   - **Visualize** → pick the chart type noted in the comment above each
+     query (bar / row / table / line)
+   - Save into a new "Finance Overview" collection
+3. **+ New** → **Dashboard** → "Finance Overview" → add the four saved
+   questions and arrange.
+
+The result should look like this:
+
+![Finance dashboard](../../docs/screenshots/finance-dashboard.png)
+
+## Wiring real data in
+
+The schema is what the dashboard reads from. Anything that writes rows
+to `finance.transactions` will show up.
+
+- **n8n:** webhook trigger → CSV/JSON parse → Postgres insert. A
+  prebuilt workflow JSON is planned but not yet shipped.
+- **Python / Prefect:** a small script that pulls from SimpleFin, Plaid,
+  or a bank's CSV export and inserts via psycopg or SQLAlchemy.
+- **Direct SQL:** for one-off imports, just `\copy` from a CSV.
+
+## Versions
+
+Built against PostgreSQL 16, n8n 2.15.1, and Metabase v0.59.6 — the
+versions pinned in this stack. Dashboard query #2 (top categories) is
+anchored to `MAX(posted_at)` rather than `now()`, so it works against
+fixed seed data and a live pipeline alike.
