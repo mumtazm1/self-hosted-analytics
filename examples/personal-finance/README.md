@@ -59,9 +59,7 @@ minutes of clicking, then it's done.
 3. **+ New** → **Dashboard** → "Finance Overview" → add the four saved
    questions and arrange.
 
-The result should look like this:
-
-![Finance dashboard](../../docs/screenshots/finance-dashboard.png)
+A reference screenshot will land in a follow-up PR.
 
 ## Wiring real data in
 
@@ -69,7 +67,7 @@ The schema is what the dashboard reads from. Anything that writes rows
 to `finance.transactions` will show up.
 
 - **n8n:** webhook trigger → CSV/JSON parse → Postgres insert. A
-  prebuilt workflow JSON is planned but not yet shipped.
+  prebuilt workflow JSON will land in a follow-up PR.
 - **Python / Prefect:** a small script that pulls from SimpleFin, Plaid,
   or a bank's CSV export and inserts via psycopg or SQLAlchemy.
 - **Direct SQL:** for one-off imports, just `\copy` from a CSV.
