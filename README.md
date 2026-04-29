@@ -1,8 +1,8 @@
 # Self-Hosted Analytics
 
-Personal analytics stack I use to track real-world data: finances,
-investments, job search, fitness. Postgres, n8n, Prefect, and Metabase
-in one `docker compose up`.
+My personal data warehouse — what I actually use to track finances,
+investments, job search, and fitness. Postgres, n8n, Prefect, and
+Metabase in one `docker compose up`.
 
 ## Quick start
 
@@ -38,9 +38,14 @@ databases), so one `pg_dump` captures everything.
 
 The stack is plumbing. End-to-end examples are what make it useful:
 
-- [`examples/personal-finance/`](examples/personal-finance/) - schema
-  and installer stub for tracking transactions. Pipeline and dashboard
-  coming soon.
+- [`examples/personal-finance/`](examples/personal-finance/) — schema,
+  6 months of synthetic seed data, and four SQL queries for a Metabase
+  dashboard covering monthly spending, top categories, recent
+  transactions, and balance trend. `./examples/personal-finance/install.sh
+  --with-sample-data` and the dashboard renders in five minutes of
+  copy-paste.
+
+More examples (job search, investments, fitness) are on the way.
 
 ## Upgrading from an earlier version
 
